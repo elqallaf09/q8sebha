@@ -37,10 +37,16 @@ class APIService {
   APIService._();
 
   // يكشف الـ platform تلقائياً
+  static const _prodUrl = 'https://q8sebha-production.up.railway.app/api';
+  static const _devAndroid = 'http://10.0.2.2:3000/api';
+  static const _devWeb = 'http://localhost:3000/api';
+
   static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:3000/api';
-    if (!kIsWeb && Platform.isAndroid) return 'http://10.0.2.2:3000/api';
-    return 'http://localhost:3000/api';
+    const bool isProduction = bool.fromEnvironment('dart.vm.product');
+    if (isProduction) return _prodUrl;
+    if (kIsWeb) return _devWeb;
+    if (!kIsWeb && Platform.isAndroid) return _devAndroid;
+    return _devWeb;
   }
 
   // ─── طلب عام ─────────────────────────────────────────────────────────

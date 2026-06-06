@@ -21,8 +21,10 @@ class WebSocketService {
 
   void connect(int userId) {
     disconnect();
-    final host = (!kIsWeb && Platform.isAndroid) ? '10.0.2.2' : 'localhost';
-    final uri = Uri.parse('ws://$host:3000/ws?user_id=$userId');
+    const bool isProduction = bool.fromEnvironment('dart.vm.product');
+    final uri = isProduction
+        ? Uri.parse('wss://q8sebha-production.up.railway.app/ws?user_id=$userId')
+        : Uri.parse('ws://${(!kIsWeb && Platform.isAndroid) ? '10.0.2.2' : 'localhost'}:3000/ws?user_id=$userId');
     _channel = WebSocketChannel.connect(uri);
     _channel!.stream.listen(_onMessage, onError: (_) => _reconnect(userId), onDone: () => _reconnect(userId));
     _startPing();
