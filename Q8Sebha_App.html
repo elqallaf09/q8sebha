@@ -1,0 +1,3300 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Q8Sebha - قطر سبحة</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8C96A;
+    --gold-dark: #9A7A2E;
+    --cream: #FAF6EF;
+    --dark: #1A1208;
+    --dark-2: #2D2010;
+    --brown: #5C3D1E;
+    --gray: #8A8A8A;
+    --gray-light: #F2EDE6;
+    --white: #FFFFFF;
+    --green: #2ECC71;
+    --red: #E74C3C;
+    --blue: #3498DB;
+    --shadow: 0 8px 32px rgba(26,18,8,0.18);
+    --shadow-sm: 0 2px 12px rgba(26,18,8,0.10);
+    --radius: 20px;
+    --radius-sm: 12px;
+    --ios-bar: 44px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Tajawal', sans-serif;
+    background: #1A1208;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ─── Phone Shell ─── */
+  .phone-shell {
+    width: 390px;
+    height: 844px;
+    background: var(--cream);
+    border-radius: 50px;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.8), inset 0 0 0 2px rgba(255,255,255,0.15);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── Status Bar ─── */
+  .status-bar {
+    height: 50px;
+    background: var(--dark);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 24px 8px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 100;
+  }
+  .status-bar .notch {
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 126px; height: 34px;
+    background: var(--dark);
+    border-radius: 0 0 20px 20px;
+  }
+  .status-time { color: var(--white); font-size: 15px; font-weight: 600; }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+  .status-icons svg { width: 16px; height: 16px; fill: white; }
+
+  /* ─── Screens ─── */
+  .screen {
+    flex: 1;
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+    position: relative;
+  }
+  .screen.active { display: flex; }
+
+  /* ─── SPLASH SCREEN ─── */
+  #splash {
+    background: linear-gradient(160deg, var(--dark) 0%, var(--dark-2) 50%, #3D2A10 100%);
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+  }
+  .splash-logo-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    animation: fadeInUp 0.8s ease;
+  }
+  .splash-logo-circle {
+    width: 160px; height: 160px;
+    background: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 60px rgba(201,168,76,0.5), 0 20px 40px rgba(0,0,0,0.4);
+    border: 3px solid var(--gold);
+    overflow: hidden;
+    position: relative;
+  }
+  .splash-logo-inner {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+    background: white;
+  }
+  .splash-logo-text { font-size: 28px; font-weight: 900; color: var(--dark); letter-spacing: -1px; }
+  .splash-logo-sub { font-size: 10px; color: var(--brown); font-weight: 500; }
+  .splash-beads {
+    font-size: 40px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+  }
+  .splash-title { font-size: 32px; font-weight: 800; color: var(--gold); letter-spacing: 1px; }
+  .splash-subtitle { font-size: 15px; color: rgba(255,255,255,0.6); font-weight: 400; }
+  .splash-divider {
+    width: 80px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 4px 0;
+  }
+  .splash-loading {
+    margin-top: 60px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .splash-loader {
+    width: 48px; height: 48px;
+    border: 3px solid rgba(201,168,76,0.2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  .splash-loading-text { color: rgba(255,255,255,0.4); font-size: 13px; }
+
+  /* ─── AUTH SCREENS ─── */
+  #login, #signup {
+    background: var(--cream);
+    overflow-y: auto;
+  }
+  .auth-header {
+    background: linear-gradient(160deg, var(--dark) 0%, var(--dark-2) 100%);
+    padding: 40px 24px 48px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    position: relative;
+  }
+  .auth-logo-small {
+    width: 80px; height: 80px;
+    background: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--gold);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--dark);
+    overflow: hidden;
+  }
+  .auth-title { font-size: 24px; font-weight: 800; color: var(--white); }
+  .auth-subtitle { font-size: 14px; color: rgba(255,255,255,0.5); }
+  .auth-wave {
+    position: absolute; bottom: -1px; left: 0; right: 0;
+    height: 28px;
+    background: var(--cream);
+    border-radius: 28px 28px 0 0;
+  }
+  .auth-body {
+    padding: 28px 24px 32px;
+    display: flex; flex-direction: column; gap: 16px;
+    flex: 1;
+  }
+  .auth-label { font-size: 13px; font-weight: 600; color: var(--brown); margin-bottom: 6px; }
+  .auth-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: white;
+    border: 1.5px solid #E8DDD0;
+    border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 15px;
+    color: var(--dark);
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: right;
+    direction: rtl;
+  }
+  .auth-input:focus { border-color: var(--gold); }
+  .input-group { display: flex; flex-direction: column; }
+  .btn-primary {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--dark);
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(201,168,76,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+    letter-spacing: 0.5px;
+  }
+  .btn-primary:active { transform: scale(0.98); box-shadow: 0 2px 10px rgba(201,168,76,0.3); }
+  .btn-secondary {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 1.5px solid var(--gold);
+    border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gold-dark);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:active { background: rgba(201,168,76,0.08); }
+  .auth-divider {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--gray); font-size: 13px;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px; background: #E8DDD0;
+  }
+  .auth-switch { text-align: center; font-size: 14px; color: var(--gray); }
+  .auth-switch a { color: var(--gold-dark); font-weight: 600; cursor: pointer; }
+  .btn-guest {
+    width: 100%;
+    padding: 14px;
+    background: var(--gray-light);
+    border: 1.5px dashed #C0B8B0;
+    border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 15px; font-weight: 600;
+    color: var(--gray);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-guest:active { background: #E8E0D8; }
+  /* Guest banner in topbar */
+  .guest-badge {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.65);
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.18);
+  }
+  /* Guest lock overlay on restricted actions */
+  .guest-lock {
+    position: absolute; inset: 0;
+    background: rgba(250,246,239,0.85);
+    border-radius: var(--radius-sm);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; z-index: 20;
+    backdrop-filter: blur(3px);
+  }
+  .guest-lock-icon { font-size: 28px; }
+  .guest-lock-text { font-size: 13px; font-weight: 600; color: var(--dark); }
+  .guest-lock-btn {
+    padding: 8px 20px;
+    background: var(--gold);
+    border: none; border-radius: 20px;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: var(--dark); cursor: pointer;
+    margin-top: 4px;
+  }
+
+  /* ─── MAIN APP ─── */
+  #main {
+    background: var(--cream);
+    flex-direction: column;
+  }
+  .app-topbar {
+    height: 56px;
+    background: var(--dark);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 50;
+  }
+  .app-topbar-logo {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .app-logo-badge {
+    width: 36px; height: 36px;
+    background: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 900; color: var(--dark);
+    border: 1.5px solid var(--gold);
+  }
+  .app-logo-name { font-size: 18px; font-weight: 800; color: var(--gold); }
+  .topbar-icons { display: flex; gap: 16px; }
+  .topbar-icon {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .app-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 80px;
+  }
+  .app-content::-webkit-scrollbar { display: none; }
+
+  /* ─── BOTTOM NAV ─── */
+  .bottom-nav {
+    height: 82px;
+    background: var(--dark);
+    display: flex;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+    padding-bottom: 16px;
+    position: relative;
+    z-index: 50;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .nav-icon { font-size: 22px; transition: transform 0.2s; }
+  .nav-label { font-size: 10px; color: rgba(255,255,255,0.4); font-weight: 500; transition: color 0.2s; }
+  .nav-item.active .nav-label { color: var(--gold); }
+  .nav-item.active .nav-icon { transform: scale(1.15); }
+  .nav-dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--gold);
+    position: absolute; bottom: -2px;
+    display: none;
+  }
+  .nav-item.active .nav-dot { display: block; }
+
+  /* ─── HOME CONTENT ─── */
+  .home-banner {
+    margin: 16px;
+    background: linear-gradient(135deg, var(--dark) 0%, var(--dark-2) 60%, #3D2A10 100%);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .home-banner::before {
+    content: '';
+    position: absolute; top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(201,168,76,0.25) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .banner-text h2 { font-size: 20px; font-weight: 800; color: var(--white); margin-bottom: 4px; }
+  .banner-text p { font-size: 13px; color: rgba(255,255,255,0.55); }
+  .banner-emoji { font-size: 56px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3)); }
+  .banner-badge {
+    position: absolute; top: 12px; left: 12px;
+    background: var(--gold);
+    color: var(--dark);
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* ─── CATEGORIES ─── */
+  .section-title {
+    font-size: 18px; font-weight: 700; color: var(--dark);
+    padding: 0 16px; margin: 20px 0 12px;
+  }
+  .cats-scroll {
+    display: flex; gap: 12px;
+    padding: 4px 16px 8px;
+    overflow-x: auto;
+  }
+  .cats-scroll::-webkit-scrollbar { display: none; }
+  .cat-card {
+    min-width: 96px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    background: white;
+    border-radius: var(--radius-sm);
+    padding: 16px 12px;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: transform 0.18s, box-shadow 0.18s;
+    border: 1.5px solid transparent;
+    flex-shrink: 0;
+  }
+  .cat-card:active { transform: scale(0.96); }
+  .cat-card.active { border-color: var(--gold); background: #FFF9ED; }
+  .cat-icon { font-size: 30px; }
+  .cat-name { font-size: 12px; font-weight: 600; color: var(--dark); text-align: center; }
+
+  /* ─── PRODUCTS GRID ─── */
+  .products-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 4px 16px 16px;
+  }
+  .product-card {
+    background: white;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: transform 0.18s;
+    position: relative;
+  }
+  .product-card:active { transform: scale(0.97); }
+  .product-img {
+    width: 100%; aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px;
+    background: linear-gradient(135deg, #FFF3DC, #FAF6EF);
+    position: relative;
+  }
+  .product-badge {
+    position: absolute; top: 8px; right: 8px;
+    background: var(--gold);
+    color: var(--dark);
+    font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: 12px;
+  }
+  .product-badge.new { background: var(--green); color: white; }
+  .product-info { padding: 12px; }
+  .product-name { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+  .product-sub { font-size: 11px; color: var(--gray); margin-bottom: 8px; }
+  .product-price { font-size: 15px; font-weight: 800; color: var(--gold-dark); }
+  .product-price span { font-size: 11px; font-weight: 500; color: var(--gray); }
+  .product-fav {
+    position: absolute; top: 8px; left: 8px;
+    width: 30px; height: 30px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  /* ─── SUBCATEGORY CHIPS ─── */
+  .subcat-chips {
+    display: flex; gap: 8px;
+    padding: 4px 16px 12px;
+    overflow-x: auto;
+  }
+  .subcat-chips::-webkit-scrollbar { display: none; }
+  .chip {
+    padding: 7px 16px;
+    border-radius: 24px;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    border: 1.5px solid #E8DDD0;
+    background: white;
+    color: var(--dark);
+    flex-shrink: 0;
+  }
+  .chip.active {
+    background: var(--gold);
+    color: var(--dark);
+    border-color: var(--gold);
+  }
+
+  /* ─── AUCTION SCREEN ─── */
+  .auction-banner {
+    margin: 16px;
+    background: linear-gradient(135deg, #1A0A00, #3D1F00);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .auction-banner::after {
+    content: '🔨';
+    font-size: 80px;
+    position: absolute; right: -10px; top: 50%; transform: translateY(-50%);
+    opacity: 0.15;
+  }
+  .auction-banner h2 { font-size: 20px; font-weight: 800; color: var(--gold); }
+  .auction-banner p { font-size: 13px; color: rgba(255,255,255,0.55); margin-top: 4px; }
+  .btn-add-auction {
+    margin-top: 14px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px;
+    background: var(--gold);
+    border-radius: 20px;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px; font-weight: 700;
+    color: var(--dark);
+    border: none; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(201,168,76,0.4);
+  }
+
+  .auction-card {
+    background: white;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    margin: 0 16px 12px;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .auction-card:active { transform: scale(0.98); }
+  .auction-card-inner { display: flex; gap: 0; }
+  .auction-img {
+    width: 120px; height: 120px;
+    background: linear-gradient(135deg, #FFF3DC, #FAF6EF);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 52px;
+    flex-shrink: 0;
+  }
+  .auction-info { padding: 14px 12px; flex: 1; }
+  .auction-title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+  .auction-specs { font-size: 11px; color: var(--gray); margin-bottom: 10px; line-height: 1.6; }
+  /* ─── TIMER SYSTEM ─── */
+  .auction-timer-wrap {
+    margin-bottom: 10px;
+  }
+  .timer-top-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .timer-label-txt { font-size: 11px; color: var(--gray); font-weight: 500; }
+  .timer-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    background: #E8F5E9; color: #2E7D32;
+    transition: background 0.5s, color 0.5s;
+  }
+  .timer-pill.warn  { background: #FFF8E1; color: #F57F17; }
+  .timer-pill.urgent{ background: #FFEBEE; color: #C62828; animation: timerPulse 1s infinite; }
+  .timer-pill.ended { background: #F5F5F5; color: #9E9E9E; }
+  .timer-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .timer-bar-track {
+    width: 100%; height: 5px;
+    background: #EDE8E0;
+    border-radius: 3px; overflow: hidden;
+  }
+  .timer-bar-fill {
+    height: 100%; border-radius: 3px;
+    background: #4CAF50;
+    transition: width 1s linear, background 0.5s;
+  }
+  .timer-bar-fill.warn   { background: #FFC107; }
+  .timer-bar-fill.urgent { background: #F44336; }
+  .auction-timer-label { font-size: 11px; color: var(--gray); }
+
+  @keyframes timerPulse {
+    0%,100% { opacity: 1; } 50% { opacity: 0.6; }
+  }
+
+  /* ─── DURATION SELECTOR (redesigned) ─── */
+  .dur-presets { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; }
+  .dur-custom-row {
+    display: flex; align-items: center; gap: 10px;
+    background: white; border: 1.5px solid #E8DDD0;
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    margin-bottom: 6px;
+  }
+  .dur-custom-row input[type=range] {
+    flex: 1; accent-color: var(--gold);
+    cursor: pointer; height: 4px;
+  }
+  .dur-custom-val {
+    min-width: 72px; text-align: center;
+    font-size: 14px; font-weight: 700; color: var(--dark);
+    background: var(--gray-light); border-radius: 8px;
+    padding: 4px 8px;
+  }
+  .auction-bid-row { display: flex; align-items: center; justify-content: space-between; }
+  .auction-current-bid { }
+  .auction-bid-label { font-size: 10px; color: var(--gray); }
+  .auction-bid-amount { font-size: 16px; font-weight: 800; color: var(--dark); }
+  .auction-bid-amount span { font-size: 11px; color: var(--gray); }
+  .btn-bid {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    border: none; border-radius: 20px;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: var(--dark); cursor: pointer;
+    box-shadow: 0 3px 12px rgba(201,168,76,0.4);
+    transition: transform 0.15s;
+  }
+  .btn-bid:active { transform: scale(0.96); }
+  .auction-footer {
+    padding: 10px 14px;
+    background: var(--gray-light);
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid #F0E8DC;
+  }
+  .auction-bids-count { font-size: 12px; color: var(--gray); }
+  .auction-seller { font-size: 12px; color: var(--brown); font-weight: 600; }
+
+  /* ─── ADD AUCTION MODAL ─── */
+  .modal-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet {
+    width: 100%;
+    background: var(--cream);
+    border-radius: 24px 24px 0 0;
+    padding: 20px 20px 32px;
+    max-height: 85%;
+    overflow-y: auto;
+  }
+  .modal-sheet::-webkit-scrollbar { display: none; }
+  .modal-handle {
+    width: 40px; height: 4px;
+    background: #D0C8BD;
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+  .modal-title { font-size: 20px; font-weight: 800; color: var(--dark); margin-bottom: 20px; text-align: center; }
+  .modal-label { font-size: 13px; font-weight: 600; color: var(--brown); margin-bottom: 6px; }
+  .modal-input {
+    width: 100%;
+    padding: 13px 16px;
+    background: white;
+    border: 1.5px solid #E8DDD0;
+    border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    color: var(--dark);
+    outline: none;
+    text-align: right;
+    direction: rtl;
+    margin-bottom: 14px;
+  }
+  .modal-input:focus { border-color: var(--gold); }
+  .modal-row { display: flex; gap: 10px; }
+  .modal-row .modal-group { flex: 1; }
+  .modal-group { margin-bottom: 14px; }
+  .upload-area {
+    width: 100%;
+    padding: 24px;
+    border: 2px dashed #D0C8BD;
+    border-radius: var(--radius-sm);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    cursor: pointer;
+    margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+  .upload-area:hover { border-color: var(--gold); }
+  .upload-area .upload-icon { font-size: 32px; }
+  .upload-area .upload-text { font-size: 13px; color: var(--gray); }
+  .duration-selector {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .dur-btn {
+    padding: 8px 14px;
+    border: 1.5px solid #E8DDD0;
+    border-radius: 20px;
+    background: white;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 12px; font-weight: 600;
+    color: var(--dark);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .dur-btn.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--dark);
+  }
+
+  /* ─── BID MODAL ─── */
+  .bid-modal {
+    background: white;
+    border-radius: 24px 24px 0 0;
+    padding: 20px 20px 40px;
+  }
+  .bid-item-preview {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--gray-light);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-bottom: 20px;
+  }
+  .bid-item-img {
+    width: 60px; height: 60px;
+    background: #FFF3DC;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+  }
+  .bid-item-name { font-size: 15px; font-weight: 700; color: var(--dark); }
+  .bid-item-spec { font-size: 12px; color: var(--gray); margin-top: 2px; }
+  .bid-amount-display {
+    text-align: center;
+    margin: 20px 0;
+  }
+  .bid-amount-label { font-size: 13px; color: var(--gray); margin-bottom: 4px; }
+  .bid-amount-value { font-size: 42px; font-weight: 800; color: var(--dark); }
+  .bid-amount-value span { font-size: 18px; color: var(--gold-dark); }
+  .bid-counter-row {
+    display: flex; align-items: center; justify-content: center; gap: 20px;
+    margin-bottom: 24px;
+  }
+  .bid-counter-btn {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    background: white;
+    font-size: 24px;
+    color: var(--gold-dark);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    transition: all 0.15s;
+  }
+  .bid-counter-btn:active { background: var(--gold); color: var(--dark); }
+  .bid-confirm-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    border: none; border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 17px; font-weight: 700;
+    color: var(--dark); cursor: pointer;
+    box-shadow: 0 6px 24px rgba(201,168,76,0.5);
+  }
+  .bid-note { text-align: center; font-size: 12px; color: var(--gray); margin-top: 10px; }
+
+  /* ─── PROFILE SCREEN ─── */
+  .profile-header {
+    background: linear-gradient(160deg, var(--dark), var(--dark-2));
+    padding: 32px 20px 60px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    position: relative;
+  }
+  .profile-avatar {
+    width: 88px; height: 88px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    border: 3px solid rgba(255,255,255,0.3);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .profile-name { font-size: 22px; font-weight: 800; color: white; }
+  .profile-email { font-size: 13px; color: rgba(255,255,255,0.5); }
+  .profile-wave {
+    position: absolute; bottom: -1px; left: 0; right: 0;
+    height: 28px;
+    background: var(--cream);
+    border-radius: 28px 28px 0 0;
+  }
+  .profile-stats {
+    display: flex;
+    background: white;
+    margin: -20px 16px 0;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    position: relative; z-index: 10;
+  }
+  .profile-stat {
+    flex: 1;
+    text-align: center;
+    padding: 16px 8px;
+    border-left: 1px solid #F0E8DC;
+  }
+  .profile-stat:last-child { border-left: none; }
+  .profile-stat-value { font-size: 20px; font-weight: 800; color: var(--dark); }
+  .profile-stat-label { font-size: 11px; color: var(--gray); margin-top: 2px; }
+  .profile-section {
+    margin: 20px 16px 0;
+    background: white;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .profile-section-title {
+    padding: 14px 16px 8px;
+    font-size: 13px; font-weight: 700;
+    color: var(--gray); text-transform: uppercase; letter-spacing: 1px;
+  }
+  .profile-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    border-top: 1px solid #F5F0EA;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .profile-item:first-of-type { border-top: none; }
+  .profile-item:active { background: var(--gray-light); }
+  .profile-item-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .profile-item-text { flex: 1; }
+  .profile-item-name { font-size: 15px; font-weight: 600; color: var(--dark); }
+  .profile-item-sub { font-size: 12px; color: var(--gray); margin-top: 1px; }
+  .profile-item-arrow { color: var(--gray); font-size: 12px; }
+  .logout-btn {
+    margin: 20px 16px 32px;
+    width: calc(100% - 32px);
+    padding: 14px;
+    background: transparent;
+    border: 1.5px solid var(--red);
+    border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 15px; font-weight: 600;
+    color: var(--red);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  /* ─── PRODUCT DETAIL ─── */
+  #product-detail {
+    background: white;
+    overflow-y: auto;
+  }
+  .detail-header {
+    background: linear-gradient(135deg, #FFF8ED, #FAF3E0);
+    height: 280px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 120px;
+    position: relative;
+  }
+  .detail-back {
+    position: absolute; top: 16px; right: 16px;
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+  }
+  .detail-fav {
+    position: absolute; top: 16px; left: 16px;
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+  }
+  .detail-body { padding: 20px; }
+  .detail-category { font-size: 12px; color: var(--gold-dark); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .detail-name { font-size: 24px; font-weight: 800; color: var(--dark); margin: 6px 0; }
+  .detail-price-row { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 20px; }
+  .detail-price { font-size: 28px; font-weight: 800; color: var(--gold-dark); }
+  .detail-price small { font-size: 14px; font-weight: 500; color: var(--gray); }
+  .detail-rating { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--gray); }
+  .detail-specs {
+    background: var(--gray-light);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .detail-specs-title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 12px; }
+  .spec-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E8DDD0; }
+  .spec-row:last-child { border-bottom: none; }
+  .spec-key { font-size: 13px; color: var(--gray); }
+  .spec-val { font-size: 13px; font-weight: 600; color: var(--dark); }
+  .detail-desc { font-size: 14px; color: var(--gray); line-height: 1.7; margin-bottom: 24px; }
+  .detail-add-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    border: none; border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 17px; font-weight: 700;
+    color: var(--dark); cursor: pointer;
+    box-shadow: 0 6px 24px rgba(201,168,76,0.5);
+    margin-bottom: 16px;
+  }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 60px 20px;
+    gap: 12px;
+    text-align: center;
+  }
+  .empty-icon { font-size: 64px; opacity: 0.3; }
+  .empty-title { font-size: 18px; font-weight: 700; color: var(--dark); }
+  .empty-sub { font-size: 14px; color: var(--gray); }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+    background: var(--dark);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 24px;
+    font-size: 14px; font-weight: 600;
+    z-index: 500;
+    white-space: nowrap;
+    animation: toastAnim 2.5s forwards;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  /* ─── SEARCH BAR ─── */
+  .search-bar {
+    display: flex; align-items: center; gap: 10px;
+    margin: 12px 16px;
+    background: white;
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .search-input {
+    flex: 1; border: none; outline: none;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px; color: var(--dark);
+    background: transparent;
+    text-align: right; direction: rtl;
+  }
+  .search-icon { font-size: 18px; color: var(--gray); }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes toastAnim {
+    0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    75% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(201,168,76,0); }
+  }
+
+  /* ─── KD BADGE ─── */
+  .kd-badge {
+    background: #E8F5E9;
+    color: #2E7D32;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* ─── FEE NOTICE ─── */
+  .fee-notice {
+    background: #FFF8E8;
+    border: 1px solid #F0D98A;
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .fee-notice-icon { font-size: 18px; }
+  .fee-notice-text { font-size: 13px; color: #7A6020; line-height: 1.5; }
+
+  /* ─── SCROLL TOP ─── */
+  html { scroll-behavior: smooth; }
+
+  /* ─── NOTIFICATION BADGE ─── */
+  .notif-bell-wrap { position: relative; }
+  .notif-badge {
+    position: absolute; top: -4px; left: -4px;
+    width: 18px; height: 18px;
+    background: var(--red);
+    border-radius: 50%;
+    font-size: 10px; font-weight: 800; color: white;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--dark);
+    display: none;
+  }
+  .notif-badge.show { display: flex; }
+
+  /* ─── NOTIFICATIONS SHEET ─── */
+  .notif-sheet {
+    background: var(--cream);
+    border-radius: 24px 24px 0 0;
+    max-height: 88%;
+    overflow-y: auto;
+    padding-bottom: 20px;
+  }
+  .notif-sheet::-webkit-scrollbar { display: none; }
+  .notif-header-bar {
+    padding: 16px 20px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #EDE8E0;
+    position: sticky; top: 0; background: var(--cream); z-index: 5;
+  }
+  .notif-header-title { font-size: 18px; font-weight: 800; color: var(--dark); }
+  .notif-clear { font-size: 13px; color: var(--gold-dark); font-weight: 600; cursor: pointer; }
+  .notif-item {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 14px 20px;
+    border-bottom: 1px solid #F0EAE0;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .notif-item:active { background: var(--gray-light); }
+  .notif-item.unread { background: #FFFBF2; }
+  .notif-item.unread::before {
+    content: ''; position: absolute;
+    top: 50%; right: 8px; transform: translateY(-50%);
+    width: 7px; height: 7px;
+    background: var(--gold); border-radius: 50%;
+  }
+  .notif-icon-wrap {
+    width: 46px; height: 46px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .notif-icon-wrap.win    { background: #FFF8E8; }
+  .notif-icon-wrap.sale   { background: #E8F5E9; }
+  .notif-icon-wrap.pay    { background: #E3F2FD; }
+  .notif-icon-wrap.warn   { background: #FFEBEE; }
+  .notif-body { flex: 1; }
+  .notif-title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 3px; }
+  .notif-text  { font-size: 13px; color: var(--gray); line-height: 1.5; }
+  .notif-time  { font-size: 11px; color: #BDB5AD; margin-top: 4px; }
+
+  /* ─── WINNER MODAL ─── */
+  .winner-sheet {
+    background: var(--cream);
+    border-radius: 24px 24px 0 0;
+    max-height: 92%;
+    overflow-y: auto; padding-bottom: 32px;
+  }
+  .winner-sheet::-webkit-scrollbar { display: none; }
+  .winner-hero {
+    background: linear-gradient(150deg, #1A2A00, #2E4800, #3D6000);
+    padding: 28px 20px 36px;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .winner-hero::before {
+    content: '🎉🎊✨🎉🎊✨';
+    position: absolute; top: 8px; left: 0; right: 0;
+    font-size: 20px; opacity: 0.25; letter-spacing: 8px;
+    white-space: nowrap; overflow: hidden;
+  }
+  .winner-trophy { font-size: 64px; margin-bottom: 8px; animation: trophyBounce 1s ease infinite alternate; }
+  .winner-hero-title { font-size: 26px; font-weight: 900; color: var(--gold); }
+  .winner-hero-sub { font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 6px; }
+  .winner-wave {
+    position: absolute; bottom: -1px; left: 0; right: 0;
+    height: 24px; background: var(--cream); border-radius: 24px 24px 0 0;
+  }
+  .winner-body { padding: 20px; }
+  .info-card {
+    background: white; border-radius: var(--radius-sm);
+    padding: 16px; margin-bottom: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+  .info-card-title {
+    font-size: 12px; font-weight: 700; color: var(--gray);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .info-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 0; border-bottom: 1px solid #F0EAE0;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-key { font-size: 13px; color: var(--gray); }
+  .info-val { font-size: 13px; font-weight: 700; color: var(--dark); }
+  .contact-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 11px 18px;
+    border-radius: 24px; border: none;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer; width: 100%; justify-content: center;
+    margin-top: 10px; transition: opacity 0.15s;
+  }
+  .contact-btn:active { opacity: 0.8; }
+  .contact-btn.whatsapp { background: #25D366; color: white; }
+  .contact-btn.telegram { background: #0088CC; color: white; }
+  .contact-btn.phone    { background: var(--dark); color: white; }
+  .payment-wait-box {
+    background: #FFF8E8;
+    border: 1.5px solid #F0D98A;
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex; align-items: flex-start; gap: 12px;
+    margin-bottom: 14px;
+  }
+  .payment-wait-icon { font-size: 24px; flex-shrink: 0; }
+  .payment-wait-text { font-size: 13px; color: #7A6020; line-height: 1.6; }
+  .ban-warning-box {
+    background: #FFEBEE;
+    border: 1.5px solid #FFCDD2;
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .ban-warning-text { font-size: 12px; color: #B71C1C; line-height: 1.6; font-weight: 500; }
+
+  /* ─── SELLER MODAL ─── */
+  .seller-hero {
+    background: linear-gradient(150deg, #0D2700, #1A4A00, #265A00);
+    padding: 28px 20px 36px; text-align: center; position: relative; overflow: hidden;
+  }
+  .seller-hero::before {
+    content: '💰💎📿💰💎📿';
+    position: absolute; top: 8px; left: 0; right: 0;
+    font-size: 20px; opacity: 0.2; letter-spacing: 8px;
+    white-space: nowrap; overflow: hidden;
+  }
+  .seller-trophy { font-size: 60px; margin-bottom: 8px; }
+  .seller-hero-title { font-size: 24px; font-weight: 900; color: #A5D6A7; }
+  .seller-hero-sub   { font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 6px; }
+  .seller-wave {
+    position: absolute; bottom: -1px; left: 0; right: 0;
+    height: 24px; background: var(--cream); border-radius: 24px 24px 0 0;
+  }
+
+  /* ─── PAYMENT LINK MODAL ─── */
+  .payment-link-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: white;
+    border: 2px solid var(--gold);
+    border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px; color: var(--dark);
+    outline: none; direction: ltr; text-align: left;
+    margin-bottom: 14px;
+  }
+  .payment-platforms {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .platform-chip {
+    padding: 7px 14px; border-radius: 20px;
+    border: 1.5px solid #E8DDD0; background: white;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 12px; font-weight: 600; color: var(--dark);
+    cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+  }
+  .platform-chip.active { background: #E3F2FD; border-color: #2196F3; color: #1565C0; }
+
+  /* ─── PAYMENT RECEIVED ─── */
+  .pay-link-card {
+    background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+    border-radius: var(--radius-sm);
+    padding: 20px; text-align: center; margin-bottom: 16px;
+  }
+  .pay-link-icon { font-size: 44px; margin-bottom: 8px; }
+  .pay-link-title { font-size: 17px; font-weight: 800; color: #1565C0; margin-bottom: 4px; }
+  .pay-link-sub { font-size: 13px; color: #1976D2; }
+  .pay-link-url {
+    background: white; border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px; color: #1976D2;
+    word-break: break-all;
+    border: 1px solid #90CAF9;
+    margin: 12px 0;
+    direction: ltr; text-align: center;
+  }
+  .pay-now-btn {
+    width: 100%; padding: 16px;
+    background: linear-gradient(135deg, #1565C0, #1976D2);
+    border: none; border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 17px; font-weight: 700;
+    color: white; cursor: pointer;
+    box-shadow: 0 6px 24px rgba(21,101,192,0.4);
+    margin-bottom: 12px;
+  }
+
+  /* ─── REPORT / BAN MODALS ─── */
+  .report-warning {
+    background: #FFEBEE; border-radius: var(--radius-sm);
+    padding: 16px; margin-bottom: 18px;
+    border: 2px solid #EF9A9A;
+  }
+  .report-warning-title { font-size: 16px; font-weight: 800; color: #B71C1C; margin-bottom: 6px; }
+  .report-warning-text  { font-size: 13px; color: #C62828; line-height: 1.7; }
+  .btn-danger {
+    width: 100%; padding: 15px;
+    background: var(--red); border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px; font-weight: 700;
+    color: white; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(231,76,60,0.4);
+  }
+  .banned-screen {
+    background: white; border-radius: 24px 24px 0 0;
+    padding: 40px 24px 40px; text-align: center;
+    max-height: 90%;
+  }
+  .banned-icon { font-size: 72px; margin-bottom: 16px; }
+  .banned-title { font-size: 24px; font-weight: 900; color: var(--red); margin-bottom: 10px; }
+  .banned-text { font-size: 14px; color: var(--gray); line-height: 1.8; margin-bottom: 24px; }
+  .banned-id {
+    background: var(--gray-light); border-radius: 10px;
+    padding: 10px; font-size: 13px; color: var(--dark);
+    font-weight: 600; margin-bottom: 24px;
+  }
+
+  /* ─── CONTACT/DELIVERY SELECTOR ─── */
+  .option-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .option-btn {
+    padding: 9px 16px; border-radius: 20px;
+    border: 1.5px solid #E8DDD0; background: white;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 13px; font-weight: 600; color: var(--dark);
+    cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .option-btn.active { background: var(--dark); color: var(--gold); border-color: var(--dark); }
+
+  /* ─── DELIVERY ADDRESS ─── */
+  #deliveryAddrWrap { display: none; }
+
+  @keyframes trophyBounce {
+    from { transform: translateY(0) scale(1); }
+    to   { transform: translateY(-8px) scale(1.08); }
+  }
+
+  /* ─── PURCHASE MODALS ─── */
+  .purchase-confirm-box {
+    background: var(--gray-light); border-radius: var(--radius-sm);
+    padding: 16px; margin-bottom: 16px;
+    display: flex; gap: 14px; align-items: center;
+  }
+  .purchase-item-emoji { font-size: 44px; flex-shrink: 0; }
+  .purchase-item-name  { font-size: 16px; font-weight: 800; color: var(--dark); }
+  .purchase-item-price { font-size: 22px; font-weight: 900; color: var(--gold-dark); margin-top: 4px; }
+  .purchase-success-hero {
+    background: linear-gradient(150deg, #003B00, #1B5E20, #2E7D32);
+    padding: 30px 20px 38px; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .purchase-success-hero::before {
+    content: '✅💳📲✅💳📲';
+    position: absolute; top: 6px; left: 0; right: 0;
+    font-size: 18px; opacity: 0.18; letter-spacing: 10px;
+    white-space: nowrap; overflow: hidden;
+  }
+  .purchase-success-icon { font-size: 60px; margin-bottom: 10px; }
+  .purchase-success-title { font-size: 24px; font-weight: 900; color: #A5D6A7; }
+  .purchase-success-sub   { font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 6px; }
+  .whatsapp-link-box {
+    background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+    border-radius: var(--radius-sm); padding: 16px;
+    display: flex; gap: 14px; align-items: center; margin-bottom: 14px;
+    border: 1.5px solid #A5D6A7;
+  }
+  .whatsapp-link-icon { font-size: 36px; flex-shrink: 0; }
+  .whatsapp-link-text { font-size: 13px; color: #1B5E20; line-height: 1.6; font-weight: 500; }
+  .whatsapp-link-text strong { font-size: 15px; display: block; margin-bottom: 2px; }
+  .btn-whatsapp-go {
+    width: 100%; padding: 15px;
+    background: #25D366; border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px; font-weight: 700;
+    color: white; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(37,211,102,0.4);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .order-id-box {
+    background: var(--gray-light); border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .order-id-label { font-size: 12px; color: var(--gray); }
+  .order-id-val   { font-size: 14px; font-weight: 800; color: var(--dark); }
+
+  /* ─── ADMIN PANEL ─── */
+  .admin-topbar {
+    background: var(--dark);
+    padding: 16px 20px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .admin-title { font-size: 18px; font-weight: 800; color: var(--gold); }
+  .admin-close { font-size: 20px; color: rgba(255,255,255,0.6); cursor: pointer; }
+  .admin-stats-row {
+    display: flex; gap: 10px;
+    padding: 16px 16px 8px;
+  }
+  .admin-stat-card {
+    flex: 1; background: white; border-radius: var(--radius-sm);
+    padding: 14px 10px; text-align: center; box-shadow: var(--shadow-sm);
+  }
+  .admin-stat-val { font-size: 22px; font-weight: 900; color: var(--dark); }
+  .admin-stat-lbl { font-size: 11px; color: var(--gray); margin-top: 2px; }
+  .admin-order-card {
+    background: white; border-radius: var(--radius-sm);
+    margin: 0 16px 10px; box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .admin-order-header {
+    background: var(--dark); padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .admin-order-id   { font-size: 13px; font-weight: 700; color: var(--gold); }
+  .admin-order-type {
+    font-size: 11px; font-weight: 700; padding: 3px 10px;
+    border-radius: 12px;
+  }
+  .admin-order-type.shop   { background: #E3F2FD; color: #1565C0; }
+  .admin-order-type.auction{ background: #FFF8E8; color: #7A6020; }
+  .admin-order-body { padding: 12px 14px; }
+  .admin-order-row  {
+    display: flex; justify-content: space-between;
+    padding: 7px 0; border-bottom: 1px solid #F5F0EA;
+    font-size: 13px;
+  }
+  .admin-order-row:last-child { border-bottom: none; }
+  .admin-order-key { color: var(--gray); }
+  .admin-order-val { font-weight: 700; color: var(--dark); }
+  .admin-badge {
+    background: var(--red); color: white;
+    font-size: 10px; font-weight: 800;
+    padding: 2px 8px; border-radius: 12px;
+    margin-right: 6px;
+  }
+
+  /* ─── AUCTION PRICE RANGE ─── */
+  .auction-price-range {
+    margin-bottom: 10px;
+  }
+  .price-range-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 5px;
+  }
+  .price-range-min { font-size: 11px; color: var(--gray); }
+  .price-range-cur { font-size: 13px; font-weight: 800; color: var(--dark); }
+  .price-range-max { font-size: 11px; color: var(--gray); }
+  .price-range-track {
+    width: 100%; height: 6px;
+    background: #EDE8E0; border-radius: 3px; overflow: hidden;
+    position: relative;
+  }
+  .price-range-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--green), var(--gold), var(--red));
+    transition: width 0.4s;
+  }
+  .price-range-labels {
+    display: flex; justify-content: space-between;
+    margin-top: 3px;
+  }
+  .prl { font-size: 10px; color: var(--gray); }
+
+  /* ─── SELLER TERMS in AUCTION FORM ─── */
+  .terms-preview {
+    background: #FFFBF2; border: 1.5px solid #F0D98A;
+    border-radius: var(--radius-sm); padding: 12px 14px;
+    font-size: 13px; color: #6B5010; line-height: 1.7;
+    margin-bottom: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone-shell">
+  <!-- Status Bar -->
+  <div class="status-bar" id="statusBar">
+    <div class="notch"></div>
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <svg viewBox="0 0 24 24"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+      <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SPLASH ═══════════════ -->
+  <div id="splash" class="screen active">
+    <div class="splash-logo-wrap">
+      <div class="splash-logo-circle">
+        <div class="splash-logo-inner">
+          <div class="splash-logo-text">Q8</div>
+          <div style="font-size:24px;">📿</div>
+          <div class="splash-logo-sub">Sebha</div>
+        </div>
+      </div>
+      <div class="splash-title">Q8Sebha</div>
+      <div class="splash-divider"></div>
+      <div class="splash-subtitle">المسابيح والأحجار الكريمة الأصيلة</div>
+    </div>
+    <div class="splash-loading">
+      <div class="splash-loader"></div>
+      <div class="splash-loading-text">جاري التحميل...</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ LOGIN ═══════════════ -->
+  <div id="login" class="screen">
+    <div class="auth-header">
+      <div class="auth-logo-small">
+        <div style="text-align:center; line-height:1.1;">
+          <div style="font-size:13px; font-weight:900; color:#1A1208;">Q8</div>
+          <div style="font-size:20px;">📿</div>
+        </div>
+      </div>
+      <div class="auth-title">مرحباً بك</div>
+      <div class="auth-subtitle">سجّل دخولك للمتابعة</div>
+      <div class="auth-wave"></div>
+    </div>
+    <div class="auth-body">
+      <div class="input-group">
+        <div class="auth-label">رقم الهاتف أو البريد الإلكتروني</div>
+        <input class="auth-input" type="text" placeholder="+965 XXXX XXXX">
+      </div>
+      <div class="input-group">
+        <div class="auth-label">كلمة المرور</div>
+        <input class="auth-input" type="password" placeholder="••••••••">
+      </div>
+      <div style="text-align:left;">
+        <a style="font-size:13px; color:var(--gold-dark); cursor:pointer; font-weight:600;">نسيت كلمة المرور؟</a>
+      </div>
+      <button class="btn-primary" onclick="goTo('main')">تسجيل الدخول</button>
+      <div class="auth-divider">أو</div>
+      <button class="btn-secondary" onclick="goTo('main')">🔑 &nbsp; الدخول بـ Apple</button>
+      <button class="btn-guest" onclick="goToGuest()">👁️ &nbsp; الدخول كضيف</button>
+      <div class="auth-switch">
+        ليس لديك حساب؟ <a onclick="goTo('signup')">أنشئ حساباً الآن</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SIGN UP ═══════════════ -->
+  <div id="signup" class="screen">
+    <div class="auth-header">
+      <div class="auth-logo-small">
+        <div style="text-align:center; line-height:1.1;">
+          <div style="font-size:13px; font-weight:900; color:#1A1208;">Q8</div>
+          <div style="font-size:20px;">📿</div>
+        </div>
+      </div>
+      <div class="auth-title">إنشاء حساب جديد</div>
+      <div class="auth-subtitle">انضم إلى عائلة Q8Sebha</div>
+      <div class="auth-wave"></div>
+    </div>
+    <div class="auth-body">
+      <div class="input-group">
+        <div class="auth-label">الاسم الكامل</div>
+        <input class="auth-input" type="text" placeholder="أدخل اسمك الكامل">
+      </div>
+      <div class="input-group">
+        <div class="auth-label">رقم الهاتف</div>
+        <input class="auth-input" type="tel" placeholder="+965 XXXX XXXX">
+      </div>
+      <div class="input-group">
+        <div class="auth-label">البريد الإلكتروني</div>
+        <input class="auth-input" type="email" placeholder="example@email.com">
+      </div>
+      <div class="input-group">
+        <div class="auth-label">كلمة المرور</div>
+        <input class="auth-input" type="password" placeholder="8 أحرف على الأقل">
+      </div>
+      <div class="input-group">
+        <div class="auth-label">تأكيد كلمة المرور</div>
+        <input class="auth-input" type="password" placeholder="أعد كتابة كلمة المرور">
+      </div>
+      <!-- Contact Method -->
+      <div class="input-group">
+        <div class="auth-label">📲 طريقة التواصل المفضلة</div>
+        <div class="option-selector">
+          <button class="option-btn active" onclick="selectOpt(this,'contact')">💬 واتساب</button>
+          <button class="option-btn" onclick="selectOpt(this,'contact')">✈️ تليجرام</button>
+          <button class="option-btn" onclick="selectOpt(this,'contact')">📞 اتصال</button>
+        </div>
+      </div>
+      <!-- Delivery Method -->
+      <div class="input-group">
+        <div class="auth-label">🚚 طريقة التوصيل</div>
+        <div class="option-selector">
+          <button class="option-btn active" onclick="selectOpt(this,'delivery'); toggleDeliveryAddr(false)">🏠 توصيل للمنزل</button>
+          <button class="option-btn" onclick="selectOpt(this,'delivery'); toggleDeliveryAddr(false)">🤝 استلام من البائع</button>
+          <button class="option-btn" onclick="selectOpt(this,'delivery'); toggleDeliveryAddr(false)">📦 شركة شحن</button>
+        </div>
+        <div id="deliveryAddrWrap">
+          <input class="auth-input" type="text" placeholder="المنطقة، الشارع، رقم البيت" style="margin-top:8px;">
+        </div>
+      </div>
+      <div style="font-size:12px; color:var(--gray); text-align:center; line-height:1.6;">
+        بالتسجيل أنت توافق على <a style="color:var(--gold-dark);">شروط الاستخدام</a> و<a style="color:var(--gold-dark);">سياسة الخصوصية</a>
+      </div>
+      <button class="btn-primary" onclick="goTo('main')">إنشاء الحساب</button>
+      <div class="auth-switch">
+        لديك حساب؟ <a onclick="goTo('login')">تسجيل الدخول</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ MAIN APP ═══════════════ -->
+  <div id="main" class="screen">
+    <div class="app-topbar">
+      <div class="app-topbar-logo">
+        <div class="app-logo-badge">
+          <div style="text-align:center; line-height:1;">
+            <div style="font-size:9px; font-weight:900;">Q8</div>
+            <div style="font-size:14px;">📿</div>
+          </div>
+        </div>
+        <div class="app-logo-name">Q8Sebha</div>
+      </div>
+      <div class="topbar-icons" id="topbarIcons">
+        <div class="topbar-icon notif-bell-wrap" onclick="openNotifSheet()">
+          🔔
+          <div class="notif-badge" id="notifBadge">3</div>
+        </div>
+        <div class="topbar-icon">🛒</div>
+      </div>
+    </div>
+
+    <!-- Content Area (swapped by nav) -->
+    <div class="app-content" id="appContent">
+
+      <!-- ── HOME TAB ── -->
+      <div id="tab-home">
+        <!-- Banner -->
+        <div class="home-banner">
+          <div class="banner-text">
+            <h2>مرحباً، أحمد! 👋</h2>
+            <p>اكتشف أجمل المسابيح والأحجار</p>
+          </div>
+          <div class="banner-emoji">📿</div>
+          <div class="banner-badge">⭐ جديد</div>
+        </div>
+
+        <!-- Search -->
+        <div class="search-bar">
+          <div class="search-icon">🔍</div>
+          <input class="search-input" placeholder="ابحث عن مسبحة، حجر كريم...">
+        </div>
+
+        <!-- Categories -->
+        <div class="section-title">التصنيفات</div>
+        <div class="cats-scroll">
+          <div class="cat-card active" onclick="switchNav('masabih')">
+            <div class="cat-icon">📿</div>
+            <div class="cat-name">المسابيح</div>
+          </div>
+          <div class="cat-card" onclick="switchNav('khawatim')">
+            <div class="cat-icon">💍</div>
+            <div class="cat-name">خواتم</div>
+          </div>
+          <div class="cat-card" onclick="switchNav('ahjar')">
+            <div class="cat-icon">💎</div>
+            <div class="cat-name">أحجار كريمة</div>
+          </div>
+          <div class="cat-card" onclick="switchNav('tuhaf')">
+            <div class="cat-icon">🏺</div>
+            <div class="cat-name">تحف</div>
+          </div>
+          <div class="cat-card" onclick="switchNav('mazad')">
+            <div class="cat-icon">🔨</div>
+            <div class="cat-name">المزاد</div>
+          </div>
+        </div>
+
+        <!-- Featured Products -->
+        <div class="section-title">المنتجات المميزة</div>
+        <div class="products-grid">
+          <div class="product-card" onclick="openDetail('masabih','📿','مسبحة عقيق يماني','مسابيح مصنع','18','45','عقيق يماني')">
+            <div class="product-img">
+              📿
+              <div class="product-badge">مميز</div>
+              <div class="product-fav">🤍</div>
+            </div>
+            <div class="product-info">
+              <div class="product-name">مسبحة عقيق يماني</div>
+              <div class="product-sub">33 حبة • مصنع</div>
+              <div class="product-price">25 <span>د.ك</span></div>
+            </div>
+          </div>
+          <div class="product-card" onclick="openDetail('ahjar','💎','ياقوت أزرق طبيعي','أحجار كريمة','8','12','ياقوت أزرق')">
+            <div class="product-img">
+              💎
+              <div class="product-badge new">جديد</div>
+              <div class="product-fav">🤍</div>
+            </div>
+            <div class="product-info">
+              <div class="product-name">ياقوت أزرق طبيعي</div>
+              <div class="product-sub">جودة عالية • سريلانكا</div>
+              <div class="product-price">120 <span>د.ك</span></div>
+            </div>
+          </div>
+          <div class="product-card" onclick="openDetail('khawatim','💍','خاتم فيروز طبيعي','خواتم','—','5','فيروز')">
+            <div class="product-img">
+              💍
+              <div class="product-fav">🤍</div>
+            </div>
+            <div class="product-info">
+              <div class="product-name">خاتم فيروز طبيعي</div>
+              <div class="product-sub">فضة 925 • حجم قابل للتعديل</div>
+              <div class="product-price">45 <span>د.ك</span></div>
+            </div>
+          </div>
+          <div class="product-card" onclick="openDetail('masabih','📿','مسبحة كهرب أصيلة','مسابيح كهرب','33','80','كهرب بلطيق')">
+            <div class="product-img" style="background:linear-gradient(135deg,#FFF0C0,#FFE082);">
+              📿
+              <div class="product-badge" style="background:#FF9800;">كهرب</div>
+              <div class="product-fav">❤️</div>
+            </div>
+            <div class="product-info">
+              <div class="product-name">مسبحة كهرب بلطيق</div>
+              <div class="product-sub">33 حبة • كهرب أصيل</div>
+              <div class="product-price">85 <span>د.ك</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Auctions -->
+        <div class="section-title">مزاد حي 🔴</div>
+        <div class="auction-card" onclick="openBidModal()">
+          <div class="auction-card-inner">
+            <div class="auction-img">📿</div>
+            <div class="auction-info">
+              <div class="auction-title">مسبحة عنبر قديمة نادرة</div>
+              <div class="auction-specs">99 حبة • وزن: 120غ • عنبر أصيل</div>
+              <div class="auction-timer-wrap" data-timer-id="t1">
+                <div class="timer-top-row">
+                  <div class="timer-label-txt">⏱ الوقت المتبقي</div>
+                  <div class="timer-pill urgent" id="homeTimer">
+                    <div class="timer-dot"></div><span>--:--:--</span>
+                  </div>
+                </div>
+                <div class="timer-bar-track"><div class="timer-bar-fill urgent" id="homeTimerBar" style="width:32%"></div></div>
+              </div>
+              <div class="auction-bid-row">
+                <div class="auction-current-bid">
+                  <div class="auction-bid-label">المزايدة الحالية</div>
+                  <div class="auction-bid-amount" id="homeBid">156 <span>د.ك</span></div>
+                </div>
+                <button class="btn-bid" onclick="event.stopPropagation(); openBidModal()">زايد +1 د.ك</button>
+              </div>
+            </div>
+          </div>
+          <div class="auction-footer">
+            <div class="auction-bids-count">🔥 23 مزايدة</div>
+            <div class="auction-seller">بائع: أبو عبدالله</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MASABIH TAB ── -->
+      <div id="tab-masabih" style="display:none;">
+        <div style="background:linear-gradient(135deg,var(--dark),var(--dark-2)); padding:20px 16px 32px; position:relative;">
+          <div style="font-size:24px; font-weight:800; color:var(--gold);">📿 المسابيح</div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.5); margin-top:4px;">أجود أنواع المسابيح الأصيلة</div>
+          <div style="position:absolute;bottom:-1px;left:0;right:0;height:24px;background:var(--cream);border-radius:24px 24px 0 0;"></div>
+        </div>
+        <div class="subcat-chips" style="margin-top:16px;">
+          <div class="chip active" onclick="filterMasabih('all',this)">الكل</div>
+          <div class="chip" onclick="filterMasabih('masna3',this)">🏭 مصنع</div>
+          <div class="chip" onclick="filterMasabih('kahrab',this)">🟡 كهرب</div>
+        </div>
+        <div class="search-bar" style="margin-top:0;">
+          <div class="search-icon">🔍</div>
+          <input class="search-input" placeholder="ابحث في المسابيح...">
+        </div>
+        <div class="products-grid" id="masabihGrid">
+          <!-- Msan3 -->
+          <div class="product-card masna3-item" onclick="openDetail('masabih','📿','مسبحة عقيق يماني','مسابيح مصنع','33','45','عقيق يماني')">
+            <div class="product-img"><div class="product-badge">مصنع</div><div class="product-fav">🤍</div>📿</div>
+            <div class="product-info"><div class="product-name">مسبحة عقيق يماني</div><div class="product-sub">33 حبة • مصنع</div><div class="product-price">25 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card masna3-item" onclick="openDetail('masabih','📿','مسبحة زمرد هندي','مسابيح مصنع','99','78','زمرد')">
+            <div class="product-img" style="background:linear-gradient(135deg,#E8F5E9,#C8E6C9);"><div class="product-badge new">جديد</div><div class="product-fav">🤍</div>📿</div>
+            <div class="product-info"><div class="product-name">مسبحة زمرد هندي</div><div class="product-sub">99 حبة • مصنع</div><div class="product-price">55 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card masna3-item" onclick="openDetail('masabih','📿','مسبحة لازورد','مسابيح مصنع','33','60','لازورد')">
+            <div class="product-img" style="background:linear-gradient(135deg,#E3F2FD,#BBDEFB);"><div class="product-fav">🤍</div>📿</div>
+            <div class="product-info"><div class="product-name">مسبحة لازورد طبيعي</div><div class="product-sub">33 حبة • مصنع</div><div class="product-price">40 <span>د.ك</span></div></div>
+          </div>
+          <!-- Kahrab -->
+          <div class="product-card kahrab-item" onclick="openDetail('masabih','📿','مسبحة كهرب بلطيق','مسابيح كهرب','33','80','كهرب بلطيق')">
+            <div class="product-img" style="background:linear-gradient(135deg,#FFF8E1,#FFE082);"><div class="product-badge" style="background:#FF9800;">كهرب</div><div class="product-fav">🤍</div>📿</div>
+            <div class="product-info"><div class="product-name">كهرب بلطيق أصيل</div><div class="product-sub">33 حبة • كهرب</div><div class="product-price">85 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card kahrab-item" onclick="openDetail('masabih','📿','كهرب ملكي قديم','مسابيح كهرب','99','200','كهرب ملكي')">
+            <div class="product-img" style="background:linear-gradient(135deg,#FFF3E0,#FFB74D33);"><div class="product-badge" style="background:#E65100; color:white;">نادر</div><div class="product-fav">🤍</div>📿</div>
+            <div class="product-info"><div class="product-name">كهرب ملكي قديم</div><div class="product-sub">99 حبة • كهرب</div><div class="product-price">200 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card kahrab-item" onclick="openDetail('masabih','📿','كهرب ليموني فاخر','مسابيح كهرب','33','65','كهرب ليموني')">
+            <div class="product-img" style="background:linear-gradient(135deg,#FFFDE7,#F9A825,0.2);"><div class="product-fav">🤍</div>📿</div>
+            <div class="product-info"><div class="product-name">كهرب ليموني فاخر</div><div class="product-sub">33 حبة • كهرب</div><div class="product-price">65 <span>د.ك</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── KHAWATIM TAB ── -->
+      <div id="tab-khawatim" style="display:none;">
+        <div style="background:linear-gradient(135deg,#1A0520,#2D0D35); padding:20px 16px 32px; position:relative;">
+          <div style="font-size:24px; font-weight:800; color:#E0AAFF;">💍 خواتم</div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.5); margin-top:4px;">خواتم أحجار كريمة طبيعية</div>
+          <div style="position:absolute;bottom:-1px;left:0;right:0;height:24px;background:var(--cream);border-radius:24px 24px 0 0;"></div>
+        </div>
+        <div class="search-bar" style="margin-top:16px;">
+          <div class="search-icon">🔍</div>
+          <input class="search-input" placeholder="ابحث في الخواتم...">
+        </div>
+        <div class="products-grid">
+          <div class="product-card" onclick="openDetail('khawatim','💍','خاتم فيروز طبيعي','خواتم','—','5','فيروز')">
+            <div class="product-img" style="background:linear-gradient(135deg,#E0F7FA,#80DEEA33);"><div class="product-badge new">جديد</div><div class="product-fav">🤍</div>💍</div>
+            <div class="product-info"><div class="product-name">خاتم فيروز طبيعي</div><div class="product-sub">فضة 925</div><div class="product-price">45 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card" onclick="openDetail('khawatim','💍','خاتم عقيق أحمر','خواتم','—','6','عقيق أحمر')">
+            <div class="product-img" style="background:linear-gradient(135deg,#FCE4EC,#EF9A9A33);"><div class="product-fav">🤍</div>💍</div>
+            <div class="product-info"><div class="product-name">خاتم عقيق أحمر</div><div class="product-sub">ذهب عيار 18</div><div class="product-price">180 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card" onclick="openDetail('khawatim','💍','خاتم زمرد ملكي','خواتم','—','7','زمرد')">
+            <div class="product-img" style="background:linear-gradient(135deg,#E8F5E9,#A5D6A733);"><div class="product-badge">مميز</div><div class="product-fav">🤍</div>💍</div>
+            <div class="product-info"><div class="product-name">خاتم زمرد ملكي</div><div class="product-sub">ذهب عيار 21</div><div class="product-price">350 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card" onclick="openDetail('khawatim','💍','خاتم ياقوت أزرق','خواتم','—','5','ياقوت')">
+            <div class="product-img" style="background:linear-gradient(135deg,#E3F2FD,#90CAF933);"><div class="product-fav">🤍</div>💍</div>
+            <div class="product-info"><div class="product-name">خاتم ياقوت أزرق</div><div class="product-sub">ذهب أبيض</div><div class="product-price">420 <span>د.ك</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── AHJAR TAB ── -->
+      <div id="tab-ahjar" style="display:none;">
+        <div style="background:linear-gradient(135deg,#0A1628,#1A3050); padding:20px 16px 32px; position:relative;">
+          <div style="font-size:24px; font-weight:800; color:#90CAF9;">💎 أحجار كريمة</div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.5); margin-top:4px;">أحجار طبيعية مضمونة الأصالة</div>
+          <div style="position:absolute;bottom:-1px;left:0;right:0;height:24px;background:var(--cream);border-radius:24px 24px 0 0;"></div>
+        </div>
+        <div class="search-bar" style="margin-top:16px;">
+          <div class="search-icon">🔍</div>
+          <input class="search-input" placeholder="ابحث في الأحجار...">
+        </div>
+        <div class="products-grid">
+          <div class="product-card" onclick="openDetail('ahjar','💎','ياقوت أزرق طبيعي','أحجار كريمة','8','12','ياقوت أزرق')">
+            <div class="product-img" style="background:linear-gradient(135deg,#E3F2FD,#90CAF933);"><div class="product-badge new">جديد</div><div class="product-fav">🤍</div>💎</div>
+            <div class="product-info"><div class="product-name">ياقوت أزرق طبيعي</div><div class="product-sub">8 قيراط • سريلانكا</div><div class="product-price">120 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card" onclick="openDetail('ahjar','🟢','زمرد كولومبي','أحجار كريمة','5','8','زمرد')">
+            <div class="product-img" style="background:linear-gradient(135deg,#E8F5E9,#A5D6A733);"><div class="product-badge">نادر</div><div class="product-fav">🤍</div>🟢</div>
+            <div class="product-info"><div class="product-name">زمرد كولومبي</div><div class="product-sub">5 قيراط • كولومبيا</div><div class="product-price">280 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card" onclick="openDetail('ahjar','🔴','ياقوت أحمر برمي','أحجار كريمة','3','5','ياقوت أحمر')">
+            <div class="product-img" style="background:linear-gradient(135deg,#FCE4EC,#EF9A9A33);"><div class="product-fav">🤍</div>🔴</div>
+            <div class="product-info"><div class="product-name">ياقوت أحمر برمي</div><div class="product-sub">3 قيراط • بورما</div><div class="product-price">320 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card" onclick="openDetail('ahjar','🟣','أميثيست أرجواني','أحجار كريمة','15','10','أميثيست')">
+            <div class="product-img" style="background:linear-gradient(135deg,#F3E5F5,#CE93D833);"><div class="product-badge new">جديد</div><div class="product-fav">🤍</div>🟣</div>
+            <div class="product-info"><div class="product-name">أميثيست أرجواني</div><div class="product-sub">15 قيراط • البرازيل</div><div class="product-price">55 <span>د.ك</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TUHAF TAB ── -->
+      <div id="tab-tuhaf" style="display:none;">
+        <div style="background:linear-gradient(135deg,#1A0E00,#3A2000); padding:20px 16px 32px; position:relative;">
+          <div style="font-size:24px; font-weight:800; color:#FFCC80;">🏺 تحف</div>
+          <div style="font-size:13px; color:rgba(255,255,255,0.5); margin-top:4px;">قطع أثرية وتحف نادرة</div>
+          <div style="position:absolute;bottom:-1px;left:0;right:0;height:24px;background:var(--cream);border-radius:24px 24px 0 0;"></div>
+        </div>
+        <div class="search-bar" style="margin-top:16px;">
+          <div class="search-icon">🔍</div>
+          <input class="search-input" placeholder="ابحث في التحف...">
+        </div>
+        <div class="products-grid">
+          <div class="product-card" onclick="openDetail('tuhaf','🏺','إبريق نحاس قديم','تحف','—','850','نحاس')">
+            <div class="product-img" style="background:linear-gradient(135deg,#FFF8DC,#DEB88733);"><div class="product-badge">أثري</div><div class="product-fav">🤍</div>🏺</div>
+            <div class="product-info"><div class="product-name">إبريق نحاس قديم</div><div class="product-sub">عمره 100+ سنة</div><div class="product-price">95 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card" onclick="openDetail('tuhaf','🗡️','خنجر خيزران','تحف','—','300','خشب خيزران')">
+            <div class="product-img" style="background:linear-gradient(135deg,#E8EAF6,#9FA8DA33);"><div class="product-badge new">جديد</div><div class="product-fav">🤍</div>🗡️</div>
+            <div class="product-info"><div class="product-name">خنجر خيزران</div><div class="product-sub">مزيّن بالفضة</div><div class="product-price">150 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card" onclick="openDetail('tuhaf','🪬','حرز عثماني','تحف','—','50','فضة')">
+            <div class="product-img" style="background:linear-gradient(135deg,#FFFDE7,#F9A82533);"><div class="product-badge">نادر</div><div class="product-fav">🤍</div>🪬</div>
+            <div class="product-info"><div class="product-name">حرز عثماني</div><div class="product-sub">فضة مزخرفة</div><div class="product-price">75 <span>د.ك</span></div></div>
+          </div>
+          <div class="product-card" onclick="openDetail('tuhaf','🕌','مباخر نحاسية','تحف','—','400','نحاس')">
+            <div class="product-img" style="background:linear-gradient(135deg,#FFF3E0,#FF980033);"><div class="product-fav">🤍</div>🕌</div>
+            <div class="product-info"><div class="product-name">مباخر نحاسية</div><div class="product-sub">مزخرف • أنتيك</div><div class="product-price">60 <span>د.ك</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MAZAD TAB ── -->
+      <div id="tab-mazad" style="display:none;">
+        <!-- Auction Banner -->
+        <div class="auction-banner">
+          <h2>🔨 المزاد الحي</h2>
+          <p>كل نقرة = 1 دينار كويتي | المزايدة مفتوحة للجميع</p>
+          <button class="btn-add-auction" onclick="openAddAuction()">
+            ➕ عرض مسبحتك للمزاد
+          </button>
+        </div>
+
+        <!-- Active Auctions -->
+        <div class="section-title">المزادات النشطة 🔴</div>
+
+        <div class="auction-card" onclick="openBidModal()">
+          <div class="auction-card-inner">
+            <div class="auction-img">📿</div>
+            <div class="auction-info">
+              <div class="auction-title">مسبحة عنبر قديمة نادرة</div>
+              <div class="auction-specs">99 حبة • وزن: 120غ • عنبر أصيل بالتشخيص</div>
+              <div class="auction-price-range">
+                <div class="price-range-row">
+                  <div class="price-range-min">بداية: 40 د.ك</div>
+                  <div class="price-range-cur" id="curBid1Lbl">حالي: 156 د.ك</div>
+                  <div class="price-range-max">حد أعلى: 400 د.ك</div>
+                </div>
+                <div class="price-range-track"><div class="price-range-fill" id="priceBar1" style="width:38%"></div></div>
+                <div class="price-range-labels"><div class="prl">40</div><div class="prl">400 د.ك</div></div>
+              </div>
+              <div class="auction-timer-wrap" data-timer-id="t1">
+                <div class="timer-top-row">
+                  <div class="timer-label-txt">⏱ الوقت المتبقي</div>
+                  <div class="timer-pill urgent" id="timer1">
+                    <div class="timer-dot"></div><span>--:--:--</span>
+                  </div>
+                </div>
+                <div class="timer-bar-track"><div class="timer-bar-fill urgent" id="timer1Bar" style="width:32%"></div></div>
+              </div>
+              <div class="auction-bid-row">
+                <div class="auction-current-bid">
+                  <div class="auction-bid-label">المزايدة الحالية</div>
+                  <div class="auction-bid-amount" id="bid1">156 <span>د.ك</span></div>
+                </div>
+                <button class="btn-bid" onclick="event.stopPropagation(); openBidModal()">زايد +1 د.ك</button>
+              </div>
+            </div>
+          </div>
+          <div class="auction-footer">
+            <div class="auction-bids-count">🔥 23 مزايدة</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div class="auction-seller">بائع: أبو عبدالله</div>
+              <button onclick="event.stopPropagation();simulateAuctionEnd()" style="background:var(--gold);border:none;border-radius:12px;padding:4px 10px;font-family:'Tajawal',sans-serif;font-size:11px;font-weight:700;color:var(--dark);cursor:pointer;">🏁 اختبر النهاية</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="auction-card" onclick="openBidModal2()">
+          <div class="auction-card-inner">
+            <div class="auction-img" style="font-size:48px; background:linear-gradient(135deg,#FFF8E1,#FFE082);">📿</div>
+            <div class="auction-info">
+              <div class="auction-title">كهرب بلطيق أخضر فاخر</div>
+              <div class="auction-specs">33 حبة • وزن: 45غ • كهرب بلطيق</div>
+              <div class="auction-price-range">
+                <div class="price-range-row">
+                  <div class="price-range-min">بداية: 60 د.ك</div>
+                  <div class="price-range-cur" id="curBid2Lbl">حالي: 88 د.ك</div>
+                  <div class="price-range-max">حد أعلى: 250 د.ك</div>
+                </div>
+                <div class="price-range-track"><div class="price-range-fill" id="priceBar2" style="width:15%"></div></div>
+                <div class="price-range-labels"><div class="prl">60</div><div class="prl">250 د.ك</div></div>
+              </div>
+              <div class="auction-timer-wrap" data-timer-id="t2">
+                <div class="timer-top-row">
+                  <div class="timer-label-txt">⏱ الوقت المتبقي</div>
+                  <div class="timer-pill warn" id="timer2">
+                    <div class="timer-dot"></div><span>--:--:--</span>
+                  </div>
+                </div>
+                <div class="timer-bar-track"><div class="timer-bar-fill warn" id="timer2Bar" style="width:65%"></div></div>
+              </div>
+              <div class="auction-bid-row">
+                <div class="auction-current-bid">
+                  <div class="auction-bid-label">المزايدة الحالية</div>
+                  <div class="auction-bid-amount" id="bid2">88 <span>د.ك</span></div>
+                </div>
+                <button class="btn-bid" onclick="event.stopPropagation(); openBidModal2()">زايد +1 د.ك</button>
+              </div>
+            </div>
+          </div>
+          <div class="auction-footer">
+            <div class="auction-bids-count">⚡ 8 مزايدات</div>
+            <div class="auction-seller">بائع: محمد العلي</div>
+          </div>
+        </div>
+
+        <div class="auction-card" onclick="openBidModal()">
+          <div class="auction-card-inner">
+            <div class="auction-img" style="font-size:48px; background:linear-gradient(135deg,#F3E5F5,#CE93D833);">📿</div>
+            <div class="auction-info">
+              <div class="auction-title">مسبحة أميثيست 99 حبة</div>
+              <div class="auction-specs">99 حبة • وزن: 95غ • أميثيست طبيعي</div>
+              <div class="auction-price-range">
+                <div class="price-range-row">
+                  <div class="price-range-min">بداية: 30 د.ك</div>
+                  <div class="price-range-cur" id="curBid3Lbl">حالي: 45 د.ك</div>
+                  <div class="price-range-max">حد أعلى: 200 د.ك</div>
+                </div>
+                <div class="price-range-track"><div class="price-range-fill" id="priceBar3" style="width:9%"></div></div>
+                <div class="price-range-labels"><div class="prl">30</div><div class="prl">200 د.ك</div></div>
+              </div>
+              <div class="auction-timer-wrap" data-timer-id="t3">
+                <div class="timer-top-row">
+                  <div class="timer-label-txt">⏱ الوقت المتبقي</div>
+                  <div class="timer-pill" id="timer3">
+                    <div class="timer-dot"></div><span>--:--:--</span>
+                  </div>
+                </div>
+                <div class="timer-bar-track"><div class="timer-bar-fill" id="timer3Bar" style="width:100%"></div></div>
+              </div>
+              <div class="auction-bid-row">
+                <div class="auction-current-bid">
+                  <div class="auction-bid-label">المزايدة الحالية</div>
+                  <div class="auction-bid-amount" id="bid3">45 <span>د.ك</span></div>
+                </div>
+                <button class="btn-bid" onclick="event.stopPropagation(); openBidModal()">زايد +1 د.ك</button>
+              </div>
+            </div>
+          </div>
+          <div class="auction-footer">
+            <div class="auction-bids-count">⚡ 3 مزايدات</div>
+            <div class="auction-seller">بائع: سالم الرشيدي</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PROFILE TAB ── -->
+      <div id="tab-profile" style="display:none;">
+        <div class="profile-header">
+          <div class="profile-avatar">👤</div>
+          <div class="profile-name">أحمد الكويتي</div>
+          <div class="profile-email">ahmed@q8sebha.com</div>
+          <div class="profile-wave"></div>
+        </div>
+        <div class="profile-stats">
+          <div class="profile-stat">
+            <div class="profile-stat-value">12</div>
+            <div class="profile-stat-label">مشترياتي</div>
+          </div>
+          <div class="profile-stat">
+            <div class="profile-stat-value">3</div>
+            <div class="profile-stat-label">مزاداتي</div>
+          </div>
+          <div class="profile-stat">
+            <div class="profile-stat-value">8</div>
+            <div class="profile-stat-label">مفضلاتي</div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <div class="profile-section-title">الحساب</div>
+          <div class="profile-item">
+            <div class="profile-item-icon" style="background:#FFF3DC;">📝</div>
+            <div class="profile-item-text"><div class="profile-item-name">تعديل الملف الشخصي</div><div class="profile-item-sub">الاسم والصورة ورقم الهاتف</div></div>
+            <div class="profile-item-arrow">›</div>
+          </div>
+          <div class="profile-item">
+            <div class="profile-item-icon" style="background:#E8F5E9;">📦</div>
+            <div class="profile-item-text"><div class="profile-item-name">طلباتي</div><div class="profile-item-sub">تتبع الطلبات والشراء</div></div>
+            <div class="profile-item-arrow">›</div>
+          </div>
+          <div class="profile-item">
+            <div class="profile-item-icon" style="background:#E3F2FD;">💳</div>
+            <div class="profile-item-text"><div class="profile-item-name">طرق الدفع</div><div class="profile-item-sub">بطاقاتي المحفوظة</div></div>
+            <div class="profile-item-arrow">›</div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <div class="profile-section-title">المزاد</div>
+          <div class="profile-item">
+            <div class="profile-item-icon" style="background:#FFF3DC;">🔨</div>
+            <div class="profile-item-text"><div class="profile-item-name">مزاداتي النشطة</div><div class="profile-item-sub">3 مزادات جارية</div></div>
+            <div class="profile-item-arrow">›</div>
+          </div>
+          <div class="profile-item">
+            <div class="profile-item-icon" style="background:#FCE4EC;">🏆</div>
+            <div class="profile-item-text"><div class="profile-item-name">المزادات المكسوبة</div><div class="profile-item-sub">5 مزادات منتهية</div></div>
+            <div class="profile-item-arrow">›</div>
+          </div>
+          <div class="profile-item">
+            <div class="profile-item-icon" style="background:#E8F5E9;">💰</div>
+            <div class="profile-item-text"><div class="profile-item-name">رصيد المزاد</div><div class="profile-item-sub">50 د.ك رصيد متاح</div></div>
+            <div class="profile-item-arrow">›</div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <div class="profile-section-title">الدعم</div>
+          <div class="profile-item">
+            <div class="profile-item-icon" style="background:#E3F2FD;">❓</div>
+            <div class="profile-item-text"><div class="profile-item-name">مركز المساعدة</div></div>
+            <div class="profile-item-arrow">›</div>
+          </div>
+          <div class="profile-item">
+            <div class="profile-item-icon" style="background:#F3E5F5;">💬</div>
+            <div class="profile-item-text"><div class="profile-item-name">تواصل معنا</div><div class="profile-item-sub">واتساب: 41145763</div></div>
+            <div class="profile-item-arrow">›</div>
+          </div>
+        </div>
+        <!-- Admin Button -->
+        <div style="margin:20px 16px 0;">
+          <button onclick="openAdminPanel()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--dark),var(--dark-2));border:none;border-radius:var(--radius-sm);font-family:'Tajawal',sans-serif;font-size:15px;font-weight:700;color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:var(--shadow);">
+            🛡️ لوحة الإدارة
+            <span class="admin-badge" id="profileAdminBadge" style="background:var(--red);">2 جديد</span>
+          </button>
+        </div>
+        <button class="logout-btn" onclick="goTo('login')">🚪 تسجيل الخروج</button>
+      </div>
+
+    </div><!-- end app-content -->
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+      <div class="nav-item active" id="nav-home" onclick="switchNav('home')">
+        <div class="nav-icon">🏠</div>
+        <div class="nav-label">الرئيسية</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item" id="nav-masabih" onclick="switchNav('masabih')">
+        <div class="nav-icon">📿</div>
+        <div class="nav-label">المسابيح</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item" id="nav-mazad" onclick="switchNav('mazad')">
+        <div class="nav-icon">🔨</div>
+        <div class="nav-label">المزاد</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item" id="nav-ahjar" onclick="switchNav('ahjar')">
+        <div class="nav-icon">💎</div>
+        <div class="nav-label">أحجار</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item" id="nav-profile" onclick="switchNav('profile')">
+        <div class="nav-icon">👤</div>
+        <div class="nav-label">حسابي</div>
+        <div class="nav-dot"></div>
+      </div>
+    </div>
+
+    <!-- ─── ADD AUCTION MODAL ─── -->
+    <div class="modal-overlay" id="addAuctionModal">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title">🔨 إضافة مسبحة للمزاد</div>
+
+        <div class="fee-notice">
+          <div class="fee-notice-icon">💡</div>
+          <div class="fee-notice-text">رسوم النشر: <strong>2 د.ك</strong> لكل مزاد • كل مزايدة تساوي <strong>1 د.ك</strong> زيادة تلقائية على السعر</div>
+        </div>
+
+        <div class="modal-group">
+          <div class="modal-label">📸 صورة المسبحة</div>
+          <div class="upload-area">
+            <div class="upload-icon">📷</div>
+            <div class="upload-text">اضغط لإضافة صورة من مكتبتك</div>
+          </div>
+        </div>
+
+        <div class="modal-group">
+          <div class="modal-label">اسم المسبحة</div>
+          <input class="modal-input" type="text" placeholder="مثال: مسبحة عقيق يماني 99 حبة">
+        </div>
+
+        <div class="modal-row">
+          <div class="modal-group">
+            <div class="modal-label">نوع المسبحة</div>
+            <input class="modal-input" type="text" placeholder="كهرب / عقيق / ...">
+          </div>
+          <div class="modal-group">
+            <div class="modal-label">عدد الحبات</div>
+            <input class="modal-input" type="number" placeholder="33 / 99">
+          </div>
+        </div>
+
+        <div class="modal-row">
+          <div class="modal-group">
+            <div class="modal-label">الوزن (غرام)</div>
+            <input class="modal-input" type="number" placeholder="0">
+          </div>
+          <div class="modal-group">
+            <div class="modal-label">قطر الحبة (مم)</div>
+            <input class="modal-input" type="number" placeholder="0">
+          </div>
+        </div>
+
+        <div class="modal-row">
+          <div class="modal-group">
+            <div class="modal-label">💵 السعر الابتدائي (د.ك)</div>
+            <input class="modal-input" id="auctionMinPrice" type="number" min="1" placeholder="مثال: 40" oninput="updatePricePreview()">
+          </div>
+          <div class="modal-group">
+            <div class="modal-label">🔝 الحد الأعلى (د.ك)</div>
+            <input class="modal-input" id="auctionMaxPrice" type="number" min="1" max="4000" placeholder="مثال: 4000" oninput="updatePricePreview()">
+          </div>
+        </div>
+        <!-- Price Range Preview -->
+        <div class="terms-preview" id="priceRangePreview" style="display:none;">
+          <strong>📊 نطاق المزاد:</strong><br>
+          البداية: <span id="prevMin">—</span> د.ك &nbsp;|&nbsp; الحد الأعلى: <span id="prevMax">—</span> د.ك<br>
+          كل مزايدة: <strong>+1 د.ك</strong> — ينتهي المزاد تلقائياً عند الوصول للحد الأعلى
+        </div>
+        <!-- Seller Terms -->
+        <div class="modal-group">
+          <div class="modal-label">📋 شروط البائع <span style="color:var(--gray);font-weight:400;">(اختياري)</span></div>
+          <textarea class="modal-input" id="auctionTerms" rows="3" style="resize:none;" placeholder="مثال: الشحن على حساب المشتري / لا يُرجع ولا يُستبدل / الفحص بالكويت فقط..."></textarea>
+        </div>
+
+        <div class="modal-group">
+          <div class="modal-label">⏱ مدة المزاد <span id="durPreview" style="color:var(--gold-dark);font-weight:700;">60 دقيقة</span></div>
+          <!-- Quick presets -->
+          <div class="dur-presets">
+            <button class="dur-btn" onclick="setDur(1,this)">1 د</button>
+            <button class="dur-btn" onclick="setDur(5,this)">5 د</button>
+            <button class="dur-btn" onclick="setDur(10,this)">10 د</button>
+            <button class="dur-btn" onclick="setDur(30,this)">30 د</button>
+            <button class="dur-btn active" onclick="setDur(60,this)">1 س</button>
+            <button class="dur-btn" onclick="setDur(180,this)">3 س</button>
+            <button class="dur-btn" onclick="setDur(360,this)">6 س</button>
+            <button class="dur-btn" onclick="setDur(720,this)">12 س</button>
+            <button class="dur-btn" onclick="setDur(1440,this)">24 س</button>
+          </div>
+          <!-- Custom slider -->
+          <div class="dur-custom-row">
+            <span style="font-size:12px;color:var(--gray);white-space:nowrap;">1 د</span>
+            <input type="range" id="durSlider" min="1" max="1440" value="60"
+              oninput="onDurSlider(this.value)">
+            <span style="font-size:12px;color:var(--gray);white-space:nowrap;">24 س</span>
+            <div class="dur-custom-val" id="durCustomVal">60 دقيقة</div>
+          </div>
+        </div>
+
+        <div class="modal-group">
+          <div class="modal-label">وصف إضافي (اختياري)</div>
+          <textarea class="modal-input" rows="3" placeholder="أي معلومات إضافية عن المسبحة..." style="resize:none;"></textarea>
+        </div>
+
+        <button class="btn-primary" onclick="submitAuction()" style="margin-top:8px;">✅ نشر المزاد</button>
+        <button class="btn-secondary" onclick="closeModal('addAuctionModal')" style="margin-top:10px;">إلغاء</button>
+      </div>
+    </div>
+
+    <!-- ─── BID MODAL 1 ─── -->
+    <div class="modal-overlay" id="bidModal">
+      <div class="bid-modal">
+        <div class="modal-handle"></div>
+        <div class="bid-item-preview">
+          <div class="bid-item-img">📿</div>
+          <div>
+            <div class="bid-item-name">مسبحة عنبر قديمة نادرة</div>
+            <div class="bid-item-spec">99 حبة • وزن: 120غ • عنبر أصيل</div>
+          </div>
+        </div>
+        <div class="bid-amount-display">
+          <div class="bid-amount-label">مزايدتك الحالية</div>
+          <div class="bid-amount-value"><span id="bidVal1">157</span> <span>د.ك</span></div>
+        </div>
+        <div class="bid-counter-row">
+          <button class="bid-counter-btn" onclick="changeBid('bidVal1',-1)">−</button>
+          <div style="font-size:14px; color:var(--gray);">كل نقرة = 1 د.ك</div>
+          <button class="bid-counter-btn" onclick="changeBid('bidVal1',1)">+</button>
+        </div>
+        <button class="bid-confirm-btn" onclick="confirmBid('bid1','bidVal1','bidModal')">🔨 تأكيد المزايدة</button>
+        <div class="bid-note">⚠️ المزايدة ملزمة بعد التأكيد</div>
+        <button class="btn-secondary" onclick="closeModal('bidModal')" style="margin-top:12px;">إلغاء</button>
+      </div>
+    </div>
+
+    <!-- ─── BID MODAL 2 ─── -->
+    <div class="modal-overlay" id="bidModal2">
+      <div class="bid-modal">
+        <div class="modal-handle"></div>
+        <div class="bid-item-preview">
+          <div class="bid-item-img" style="background:#FFF8E1;">📿</div>
+          <div>
+            <div class="bid-item-name">كهرب بلطيق أخضر فاخر</div>
+            <div class="bid-item-spec">33 حبة • وزن: 45غ • كهرب بلطيق</div>
+          </div>
+        </div>
+        <div class="bid-amount-display">
+          <div class="bid-amount-label">مزايدتك الحالية</div>
+          <div class="bid-amount-value"><span id="bidVal2">89</span> <span>د.ك</span></div>
+        </div>
+        <div class="bid-counter-row">
+          <button class="bid-counter-btn" onclick="changeBid('bidVal2',-1)">−</button>
+          <div style="font-size:14px; color:var(--gray);">كل نقرة = 1 د.ك</div>
+          <button class="bid-counter-btn" onclick="changeBid('bidVal2',1)">+</button>
+        </div>
+        <button class="bid-confirm-btn" onclick="confirmBid('bid2','bidVal2','bidModal2')">🔨 تأكيد المزايدة</button>
+        <div class="bid-note">⚠️ المزايدة ملزمة بعد التأكيد</div>
+        <button class="btn-secondary" onclick="closeModal('bidModal2')" style="margin-top:12px;">إلغاء</button>
+      </div>
+    </div>
+
+    <!-- ─── GUEST MODAL ─── -->
+    <div class="modal-overlay" id="guestModal">
+      <div class="modal-sheet" style="text-align:center;">
+        <div class="modal-handle"></div>
+        <div style="font-size:56px; margin-bottom:12px;">🔒</div>
+        <div style="font-size:20px; font-weight:800; color:var(--dark); margin-bottom:8px;">هذه الميزة للأعضاء فقط</div>
+        <div style="font-size:14px; color:var(--gray); margin-bottom:24px; line-height:1.7;">
+          أنت حالياً تتصفح كضيف.<br>سجّل حساباً مجانياً للمزايدة والشراء وإضافة منتجات للمزاد.
+        </div>
+        <button class="btn-primary" onclick="closeGuestModal(); isGuest=false; goTo('signup')">📝 &nbsp; إنشاء حساب مجاناً</button>
+        <button class="btn-secondary" style="margin-top:10px;" onclick="closeGuestModal(); isGuest=false; goTo('login')">تسجيل الدخول</button>
+        <button style="background:none;border:none;font-family:'Tajawal',sans-serif;font-size:14px;color:var(--gray);margin-top:14px;cursor:pointer;width:100%;" onclick="closeGuestModal()">متابعة كضيف</button>
+      </div>
+    </div>
+
+    <!-- ═══ PURCHASE CONFIRM MODAL ═══ -->
+    <div class="modal-overlay" id="purchaseConfirmModal">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title" style="margin-bottom:14px;">🛒 تأكيد الشراء</div>
+        <div class="purchase-confirm-box">
+          <div class="purchase-item-emoji" id="purchaseEmoji">📿</div>
+          <div>
+            <div class="purchase-item-name" id="purchaseName">مسبحة عقيق يماني</div>
+            <div class="purchase-item-price" id="purchasePrice">25 د.ك</div>
+          </div>
+        </div>
+        <div class="info-card" style="margin-bottom:14px;">
+          <div class="info-card-title">📦 تفاصيل الطلب</div>
+          <div class="info-row"><div class="info-key">المنتج</div><div class="info-val" id="purchaseNameSmall">مسبحة عقيق يماني</div></div>
+          <div class="info-row"><div class="info-key">السعر</div><div class="info-val" id="purchasePriceSmall" style="color:var(--gold-dark);">25 د.ك</div></div>
+          <div class="info-row"><div class="info-key">طريقة الدفع</div><div class="info-val">💳 رابط دفع عبر واتساب</div></div>
+          <div class="info-row"><div class="info-key">التوصيل</div><div class="info-val">🏠 حسب معلوماتك المسجلة</div></div>
+        </div>
+        <div class="fee-notice" style="margin-bottom:14px;">
+          <div class="fee-notice-icon">📲</div>
+          <div class="fee-notice-text">بعد تأكيدك، سيصلك <strong>رابط الدفع عبر الواتساب</strong> خلال دقائق من إدارة Q8Sebha.</div>
+        </div>
+        <button class="btn-primary" onclick="confirmPurchase()">✅ تأكيد الطلب</button>
+        <button class="btn-secondary" onclick="closeModal('purchaseConfirmModal')" style="margin-top:10px;">إلغاء</button>
+      </div>
+    </div>
+
+    <!-- ═══ PURCHASE SUCCESS MODAL ═══ -->
+    <div class="modal-overlay" id="purchaseSuccessModal">
+      <div class="winner-sheet">
+        <div class="modal-handle" style="margin:12px auto 0;"></div>
+        <div class="purchase-success-hero">
+          <div class="purchase-success-icon">✅</div>
+          <div class="purchase-success-title">تم استلام طلبك!</div>
+          <div class="purchase-success-sub">سيتم التواصل معك عبر الواتساب</div>
+          <div class="winner-wave"></div>
+        </div>
+        <div style="padding:20px;">
+          <!-- Order ID -->
+          <div class="order-id-box">
+            <div class="order-id-label">رقم الطلب</div>
+            <div class="order-id-val" id="orderIdDisplay">Q8S-2026-0001</div>
+          </div>
+          <!-- Item -->
+          <div class="info-card" style="margin-bottom:14px;">
+            <div class="info-card-title">📿 تفاصيل الطلب</div>
+            <div class="info-row"><div class="info-key">المنتج</div><div class="info-val" id="successItemName">—</div></div>
+            <div class="info-row"><div class="info-key">المبلغ</div><div class="info-val" id="successItemPrice" style="color:var(--gold-dark);font-size:18px;">— د.ك</div></div>
+            <div class="info-row"><div class="info-key">الحالة</div><div class="info-val" style="color:var(--green);">🟢 قيد المعالجة</div></div>
+          </div>
+          <!-- Whatsapp box -->
+          <div class="whatsapp-link-box">
+            <div class="whatsapp-link-icon">💬</div>
+            <div class="whatsapp-link-text">
+              <strong>رابط الدفع عبر الواتساب</strong>
+              سيصلك رابط دفع آمن على رقم <strong>+965 41145763</strong> خلال دقائق. الرجاء إبقاء واتساب مفعلاً.
+            </div>
+          </div>
+          <button class="btn-whatsapp-go" onclick="closeModal('purchaseSuccessModal'); showToast('📲 جاري فتح واتساب...')">
+            💬 فتح واتساب الآن
+          </button>
+          <button class="btn-secondary" onclick="closeModal('purchaseSuccessModal')">لاحقاً</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ADMIN PANEL MODAL ═══ -->
+    <div class="modal-overlay" id="adminModal" style="align-items:flex-start; padding-top:0;">
+      <div style="width:100%; height:100%; background:var(--cream); display:flex; flex-direction:column; overflow:hidden;">
+        <div class="admin-topbar">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="font-size:20px;">🛡️</div>
+            <div class="admin-title">لوحة الإدارة</div>
+            <div class="admin-badge" id="adminNewBadge">جديد</div>
+          </div>
+          <div class="admin-close" onclick="closeModal('adminModal')">✕</div>
+        </div>
+        <!-- Stats -->
+        <div style="overflow-y:auto; flex:1; padding-bottom:20px;">
+          <div class="admin-stats-row">
+            <div class="admin-stat-card">
+              <div class="admin-stat-val" id="adminOrderCount">2</div>
+              <div class="admin-stat-lbl">طلبات اليوم</div>
+            </div>
+            <div class="admin-stat-card">
+              <div class="admin-stat-val" id="adminAuctionCount">1</div>
+              <div class="admin-stat-lbl">مزادات مكتملة</div>
+            </div>
+            <div class="admin-stat-card">
+              <div class="admin-stat-val" id="adminRevenue">181</div>
+              <div class="admin-stat-lbl">د.ك إجمالي</div>
+            </div>
+          </div>
+
+          <div style="padding:0 16px;margin-bottom:12px;font-size:13px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;">
+            📋 الطلبات الجديدة
+          </div>
+
+          <!-- Shop Order 1 -->
+          <div class="admin-order-card" id="adminOrder1">
+            <div class="admin-order-header">
+              <div class="admin-order-id">Q8S-2026-0001</div>
+              <div class="admin-order-type shop">شراء مباشر</div>
+            </div>
+            <div class="admin-order-body">
+              <div class="admin-order-row"><div class="admin-order-key">المنتج</div><div class="admin-order-val" id="adminProductName">مسبحة عقيق يماني</div></div>
+              <div class="admin-order-row"><div class="admin-order-key">المشتري</div><div class="admin-order-val">أحمد الكويتي</div></div>
+              <div class="admin-order-row"><div class="admin-order-key">الهاتف</div><div class="admin-order-val" style="direction:ltr;">+965 50012345</div></div>
+              <div class="admin-order-row"><div class="admin-order-key">المبلغ</div><div class="admin-order-val" id="adminProductPrice" style="color:var(--gold-dark);">25 د.ك</div></div>
+              <div class="admin-order-row"><div class="admin-order-key">التوصيل</div><div class="admin-order-val">🏠 الجهراء</div></div>
+              <div class="admin-order-row"><div class="admin-order-key">الحالة</div><div class="admin-order-val" style="color:var(--green);">🟢 قيد المعالجة</div></div>
+            </div>
+            <div style="display:flex;gap:8px;padding:10px 14px;background:var(--gray-light);border-top:1px solid #EDE8E0;">
+              <button onclick="showToast('📲 تم إرسال رابط الدفع عبر واتساب!')" style="flex:1;padding:9px;background:var(--gold);border:none;border-radius:10px;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;color:var(--dark);cursor:pointer;">💳 إرسال رابط الدفع</button>
+              <button onclick="showToast('✅ تم تأكيد الطلب')" style="flex:1;padding:9px;background:var(--dark);border:none;border-radius:10px;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer;">✅ تأكيد</button>
+            </div>
+          </div>
+
+          <!-- Auction Order -->
+          <div class="admin-order-card">
+            <div class="admin-order-header">
+              <div class="admin-order-id">Q8S-AUC-0047</div>
+              <div class="admin-order-type auction">مزاد مكتمل</div>
+            </div>
+            <div class="admin-order-body">
+              <div class="admin-order-row"><div class="admin-order-key">المسبحة</div><div class="admin-order-val">كهرب بلطيق أخضر فاخر</div></div>
+              <div class="admin-order-row"><div class="admin-order-key">الفائز</div><div class="admin-order-val">أحمد الكويتي</div></div>
+              <div class="admin-order-row"><div class="admin-order-key">البائع</div><div class="admin-order-val">محمد العلي</div></div>
+              <div class="admin-order-row"><div class="admin-order-key">سعر البيع</div><div class="admin-order-val" style="color:var(--gold-dark);">92 د.ك</div></div>
+              <div class="admin-order-row"><div class="admin-order-key">رسوم المزاد</div><div class="admin-order-val" style="color:var(--green);">2 د.ك</div></div>
+              <div class="admin-order-row"><div class="admin-order-key">الحالة</div><div class="admin-order-val" style="color:var(--gold-dark);">🟡 في انتظار الدفع</div></div>
+            </div>
+          </div>
+
+          <div style="padding:0 16px;margin:16px 0 8px;font-size:13px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;">
+            📊 إحصائيات المزادات
+          </div>
+          <div style="margin:0 16px;background:white;border-radius:var(--radius-sm);padding:14px;box-shadow:var(--shadow-sm);">
+            <div class="admin-order-row"><div class="admin-order-key">مزادات نشطة</div><div class="admin-order-val">3</div></div>
+            <div class="admin-order-row"><div class="admin-order-key">إجمالي المزايدين</div><div class="admin-order-val">34 مستخدم</div></div>
+            <div class="admin-order-row"><div class="admin-order-key">رسوم المزادات (شهري)</div><div class="admin-order-val" style="color:var(--green);">18 د.ك</div></div>
+            <div class="admin-order-row"><div class="admin-order-key">مستخدمون محظورون</div><div class="admin-order-val" style="color:var(--red);">1</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ NOTIFICATIONS SHEET ═══ -->
+    <div class="modal-overlay" id="notifSheetModal">
+      <div class="notif-sheet">
+        <div class="modal-handle" style="margin:12px auto 0;"></div>
+        <div class="notif-header-bar">
+          <div class="notif-header-title">🔔 الإشعارات</div>
+          <div class="notif-clear" onclick="clearNotifs()">مسح الكل</div>
+        </div>
+        <!-- Win notification (buyer) -->
+        <div class="notif-item unread" onclick="closeModal('notifSheetModal'); openWinnerModal()">
+          <div class="notif-icon-wrap win">🏆</div>
+          <div class="notif-body">
+            <div class="notif-title">🎉 مبروك! فزت بالمزاد</div>
+            <div class="notif-text">فزت بمسبحة عنبر قديمة نادرة بمبلغ <strong>156 د.ك</strong> — انتظر رابط الدفع من البائع</div>
+            <div class="notif-time">منذ 2 دقيقة</div>
+          </div>
+        </div>
+        <!-- Seller notification -->
+        <div class="notif-item unread" onclick="closeModal('notifSheetModal'); openSellerModal()">
+          <div class="notif-icon-wrap sale">💰</div>
+          <div class="notif-body">
+            <div class="notif-title">💰 تم بيع مسبحتك!</div>
+            <div class="notif-text">كهرب بلطيق أخضر فاخر — فاز بها: أحمد الكويتي بـ <strong>92 د.ك</strong></div>
+            <div class="notif-time">منذ 5 دقائق</div>
+          </div>
+        </div>
+        <!-- Payment link received -->
+        <div class="notif-item unread" onclick="closeModal('notifSheetModal'); openPaymentReceived()">
+          <div class="notif-icon-wrap pay">💳</div>
+          <div class="notif-body">
+            <div class="notif-title">💳 رابط الدفع وصلك</div>
+            <div class="notif-text">البائع أبو عبدالله أرسل رابط الدفع لمسبحة العنبر — ادفع الآن لإتمام الصفقة</div>
+            <div class="notif-time">منذ 10 دقائق</div>
+          </div>
+        </div>
+        <!-- Warning -->
+        <div class="notif-item" style="opacity:0.7;">
+          <div class="notif-icon-wrap" style="background:#FFF3DC;">📢</div>
+          <div class="notif-body">
+            <div class="notif-title">تذكير بمزادك</div>
+            <div class="notif-text">مسبحتك الأميثيست لديها 3 مزايدات — المزاد ينتهي خلال 12 ساعة</div>
+            <div class="notif-time">منذ 30 دقيقة</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ WINNER MODAL (للمشتري) ═══ -->
+    <div class="modal-overlay" id="winnerModal">
+      <div class="winner-sheet">
+        <div class="modal-handle" style="margin:12px auto 0;"></div>
+        <div class="winner-hero">
+          <div class="winner-trophy">🏆</div>
+          <div class="winner-hero-title">مبروك! فزت بالمزاد</div>
+          <div class="winner-hero-sub">مسبحة عنبر قديمة نادرة</div>
+          <div class="winner-wave"></div>
+        </div>
+        <div class="winner-body">
+          <!-- Item Info -->
+          <div class="info-card">
+            <div class="info-card-title">📿 تفاصيل المسبحة</div>
+            <div class="info-row"><div class="info-key">اسم المسبحة</div><div class="info-val">مسبحة عنبر قديمة نادرة</div></div>
+            <div class="info-row"><div class="info-key">المواصفات</div><div class="info-val">99 حبة • 120 غرام • عنبر</div></div>
+            <div class="info-row"><div class="info-key">سعر الفوز</div><div class="info-val" style="color:var(--gold-dark);font-size:16px;">156 د.ك 🏅</div></div>
+          </div>
+          <!-- Seller Info -->
+          <div class="info-card">
+            <div class="info-card-title">👤 معلومات البائع</div>
+            <div class="info-row"><div class="info-key">الاسم</div><div class="info-val">أبو عبدالله الكويتي</div></div>
+            <div class="info-row"><div class="info-key">رقم الهاتف</div><div class="info-val" style="direction:ltr;">+965 41145763</div></div>
+            <div class="info-row"><div class="info-key">طريقة التواصل</div><div class="info-val">💬 واتساب</div></div>
+            <div class="info-row"><div class="info-key">طريقة التوصيل</div><div class="info-val">🚚 توصيل — حولي</div></div>
+            <button class="contact-btn whatsapp" onclick="showToast('📲 جاري فتح واتساب...')">
+              💬 تواصل مع البائع عبر واتساب
+            </button>
+          </div>
+          <!-- Payment Wait -->
+          <div class="payment-wait-box">
+            <div class="payment-wait-icon">⏳</div>
+            <div class="payment-wait-text">
+              <strong>انتظر رابط الدفع</strong> من البائع عبر الإشعارات أو واتساب.<br>
+              المبلغ: <strong>156 د.ك</strong> — يجب الدفع خلال 24 ساعة.
+            </div>
+          </div>
+          <!-- Ban Warning -->
+          <div class="ban-warning-box">
+            <div style="font-size:18px;">⚠️</div>
+            <div class="ban-warning-text">
+              <strong>تحذير:</strong> في حال أفاد البائع بعدم استلامه للمبلغ، سيتم <strong>شطبك نهائياً</strong> من التطبيق وحظر حسابك.
+            </div>
+          </div>
+          <button class="btn-primary" onclick="closeModal('winnerModal')">✅ فهمت — انتظر رابط الدفع</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SELLER MODAL (للبائع) ═══ -->
+    <div class="modal-overlay" id="sellerModal">
+      <div class="winner-sheet">
+        <div class="modal-handle" style="margin:12px auto 0;"></div>
+        <div class="seller-hero">
+          <div class="seller-trophy">💰</div>
+          <div class="seller-hero-title">تم بيع مسبحتك!</div>
+          <div class="seller-hero-sub">كهرب بلطيق أخضر فاخر — 92 د.ك</div>
+          <div class="seller-wave"></div>
+        </div>
+        <div class="winner-body">
+          <!-- Item Summary -->
+          <div class="info-card">
+            <div class="info-card-title">📿 تفاصيل البيع</div>
+            <div class="info-row"><div class="info-key">المسبحة</div><div class="info-val">كهرب بلطيق أخضر فاخر</div></div>
+            <div class="info-row"><div class="info-key">سعر البيع النهائي</div><div class="info-val" style="color:var(--green);font-size:16px;">92 د.ك 💵</div></div>
+            <div class="info-row"><div class="info-key">عدد المزايدات</div><div class="info-val">12 مزايدة</div></div>
+          </div>
+          <!-- Winner Info -->
+          <div class="info-card">
+            <div class="info-card-title">🏆 معلومات الفائز (المشتري)</div>
+            <div class="info-row"><div class="info-key">الاسم</div><div class="info-val">أحمد الكويتي</div></div>
+            <div class="info-row"><div class="info-key">رقم الهاتف</div><div class="info-val" style="direction:ltr;">+965 50012345</div></div>
+            <div class="info-row"><div class="info-key">التواصل</div><div class="info-val">💬 واتساب</div></div>
+            <div class="info-row"><div class="info-key">التوصيل</div><div class="info-val">🏠 توصيل — الجهراء</div></div>
+            <div class="info-row"><div class="info-key">العنوان</div><div class="info-val">الجهراء، شارع 15، منزل 7</div></div>
+            <button class="contact-btn whatsapp" onclick="showToast('📲 جاري فتح واتساب...')">
+              💬 تواصل مع المشتري
+            </button>
+          </div>
+          <!-- Send Payment Link -->
+          <button class="btn-primary" onclick="closeModal('sellerModal'); openPaymentLinkModal()" style="margin-bottom:10px;">
+            💳 إرسال رابط الدفع للمشتري
+          </button>
+          <!-- Report Non Payment -->
+          <button class="btn-secondary" style="border-color:var(--red); color:var(--red);" onclick="closeModal('sellerModal'); openReportModal()">
+            🚨 الإبلاغ عن عدم الدفع
+          </button>
+          <div style="font-size:12px;color:var(--gray);text-align:center;margin-top:10px;line-height:1.6;">
+            أرسل رابط الدفع أولاً وانتظر 24 ساعة قبل الإبلاغ
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAYMENT LINK MODAL (البائع يرسل الرابط) ═══ -->
+    <div class="modal-overlay" id="paymentLinkModal">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title">💳 إرسال رابط الدفع</div>
+        <div style="font-size:14px;color:var(--gray);text-align:center;margin-bottom:20px;">
+          اختر منصة الدفع وأدخل رابطك
+        </div>
+        <!-- Platform chips -->
+        <div class="modal-label">منصة الدفع</div>
+        <div class="payment-platforms">
+          <button class="platform-chip active" onclick="selectPlatform(this,'MyFatoorah')">MyFatoorah</button>
+          <button class="platform-chip" onclick="selectPlatform(this,'Tap')">Tap</button>
+          <button class="platform-chip" onclick="selectPlatform(this,'K-Net')">K-Net</button>
+          <button class="platform-chip" onclick="selectPlatform(this,'PayPal')">PayPal</button>
+          <button class="platform-chip" onclick="selectPlatform(this,'رابط آخر')">رابط آخر</button>
+        </div>
+        <div class="modal-label">رابط الدفع</div>
+        <input class="payment-link-input" id="paymentLinkInput" type="url" placeholder="https://payment.myfatoorah.com/...">
+        <div class="modal-label">المبلغ المطلوب</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <input class="modal-input" type="number" value="92" style="margin-bottom:0; width:100px; direction:ltr;">
+          <span style="font-size:15px;font-weight:700;color:var(--dark);">د.ك</span>
+        </div>
+        <!-- Warning -->
+        <div class="fee-notice" style="margin-bottom:16px;">
+          <div class="fee-notice-icon">⚠️</div>
+          <div class="fee-notice-text">
+            سيتم إرسال الرابط للمشتري فوراً عبر إشعار داخل التطبيق. تأكد من صحة الرابط والمبلغ.
+          </div>
+        </div>
+        <button class="btn-primary" onclick="sendPaymentLink()">📤 إرسال الرابط للمشتري</button>
+        <button class="btn-secondary" onclick="closeModal('paymentLinkModal')" style="margin-top:10px;">إلغاء</button>
+      </div>
+    </div>
+
+    <!-- ═══ PAYMENT RECEIVED MODAL (المشتري يستلم الرابط) ═══ -->
+    <div class="modal-overlay" id="paymentReceivedModal">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="pay-link-card">
+          <div class="pay-link-icon">💳</div>
+          <div class="pay-link-title">رابط الدفع وصلك!</div>
+          <div class="pay-link-sub">من البائع: أبو عبدالله</div>
+          <div class="pay-link-url">https://payment.myfatoorah.com/En/KWT/Pay?id=q8sebha-156kd-amber</div>
+        </div>
+        <!-- Item Summary -->
+        <div class="info-card" style="margin-bottom:14px;">
+          <div class="info-row"><div class="info-key">المسبحة</div><div class="info-val">مسبحة عنبر قديمة نادرة</div></div>
+          <div class="info-row"><div class="info-key">المبلغ</div><div class="info-val" style="color:var(--dark);font-size:18px;font-weight:900;">156 د.ك</div></div>
+          <div class="info-row"><div class="info-key">منصة الدفع</div><div class="info-val">MyFatoorah</div></div>
+        </div>
+        <!-- Ban Warning -->
+        <div class="ban-warning-box" style="margin-bottom:14px;">
+          <div style="font-size:18px;">🚫</div>
+          <div class="ban-warning-text">
+            <strong>تحذير مهم:</strong> عدم الدفع خلال 24 ساعة أو الإبلاغ عنك من البائع سيؤدي إلى <strong>شطبك نهائياً</strong> من التطبيق.
+          </div>
+        </div>
+        <button class="pay-now-btn" onclick="closeModal('paymentReceivedModal'); showToast('✅ جاري التحويل لصفحة الدفع...')">
+          💳 ادفع الآن — 156 د.ك
+        </button>
+        <button class="btn-secondary" onclick="closeModal('paymentReceivedModal')">لاحقاً</button>
+      </div>
+    </div>
+
+    <!-- ═══ REPORT NON-PAYMENT MODAL ═══ -->
+    <div class="modal-overlay" id="reportModal">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-size:52px;margin-bottom:8px;">🚨</div>
+          <div style="font-size:20px;font-weight:800;color:var(--dark);">الإبلاغ عن عدم الدفع</div>
+        </div>
+        <div class="report-warning">
+          <div class="report-warning-title">⚠️ إجراء لا رجعة فيه</div>
+          <div class="report-warning-text">
+            بتأكيدك هذا الإجراء، سيتم:<br><br>
+            🔴 <strong>شطب المشتري نهائياً</strong> من التطبيق<br>
+            🔴 <strong>حظر حسابه</strong> ورقم هاتفه<br>
+            🔴 <strong>إرسال تحذير</strong> لجميع البائعين<br><br>
+            تأكد أنك أرسلت رابط الدفع وانتظرت 24 ساعة كاملة قبل الإبلاغ.
+          </div>
+        </div>
+        <div class="info-card" style="margin-bottom:16px;">
+          <div class="info-row"><div class="info-key">المشتري</div><div class="info-val">أحمد الكويتي</div></div>
+          <div class="info-row"><div class="info-key">المبلغ غير المدفوع</div><div class="info-val" style="color:var(--red);">92 د.ك</div></div>
+          <div class="info-row"><div class="info-key">المسبحة</div><div class="info-val">كهرب بلطيق أخضر</div></div>
+        </div>
+        <button class="btn-danger" onclick="confirmReport()">🚨 تأكيد الإبلاغ وشطب المشتري</button>
+        <button class="btn-secondary" onclick="closeModal('reportModal')" style="margin-top:10px;">إلغاء</button>
+      </div>
+    </div>
+
+    <!-- ═══ BANNED MODAL (للمشتري المشطوب) ═══ -->
+    <div class="modal-overlay" id="bannedModal">
+      <div class="banned-screen">
+        <div class="modal-handle" style="margin:0 auto 20px;"></div>
+        <div class="banned-icon">🚫</div>
+        <div class="banned-title">تم شطبك من البرنامج</div>
+        <div class="banned-text">
+          تم إبلاغنا من قبل البائع بعدم استلام المبلغ المستحق.<br>
+          بناءً على شروط الاستخدام، تم <strong>حظر حسابك نهائياً</strong> من تطبيق Q8Sebha.
+        </div>
+        <div class="banned-id">
+          رقم البلاغ: <strong>Q8S-2026-0047</strong><br>
+          التاريخ: 6 يونيو 2026
+        </div>
+        <div style="font-size:13px;color:var(--gray);line-height:1.7;margin-bottom:24px;">
+          للاعتراض على هذا القرار، تواصل معنا عبر:<br>
+          <strong style="color:var(--dark);">واتساب: +965 41145763</strong>
+        </div>
+        <button class="btn-secondary" onclick="closeModal('bannedModal'); goTo('login')">
+          خروج
+        </button>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+  </div><!-- end main -->
+
+  <!-- ═══════════════ PRODUCT DETAIL ═══════════════ -->
+  <div id="product-detail" class="screen">
+    <div class="detail-header" id="detailImg">
+      <div class="detail-back" onclick="goTo('main')">←</div>
+      <div class="detail-fav" id="detailFav" onclick="toggleFav()">🤍</div>
+      <span id="detailEmoji" style="position:relative;z-index:1;">📿</span>
+    </div>
+    <div class="detail-body" style="overflow-y:auto; flex:1;">
+      <div class="detail-category" id="detailCat">مسابيح مصنع</div>
+      <div class="detail-name" id="detailName">مسبحة عقيق يماني</div>
+      <div class="detail-price-row">
+        <div class="detail-price" id="detailPrice">25 <small>د.ك</small></div>
+        <div class="detail-rating">⭐ 4.8 &nbsp;(32 تقييم)</div>
+      </div>
+      <div class="detail-specs">
+        <div class="detail-specs-title">المواصفات</div>
+        <div class="spec-row"><div class="spec-key">عدد الحبات</div><div class="spec-val" id="specCount">33 حبة</div></div>
+        <div class="spec-row"><div class="spec-key">الوزن</div><div class="spec-val" id="specWeight">45 غرام</div></div>
+        <div class="spec-row"><div class="spec-key">النوع</div><div class="spec-val" id="specType">عقيق يماني</div></div>
+        <div class="spec-row"><div class="spec-key">المنشأ</div><div class="spec-val">اليمن</div></div>
+        <div class="spec-row"><div class="spec-key">شهادة أصالة</div><div class="spec-val">✅ مضمونة</div></div>
+      </div>
+      <div class="detail-desc">
+        مسبحة أصيلة من أجود أنواع الأحجار الطبيعية، مضمونة بشهادة أصالة. تتميز بألوانها الطبيعية الرائعة ونعومة ملمسها. مصنوعة يدوياً بعناية فائقة لتحقق تجربة روحانية مميزة.
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        <button class="detail-add-btn" style="flex:1;margin-bottom:0;" onclick="openPurchaseConfirm()">
+          🛒 اشترِ الآن
+        </button>
+        <button style="width:52px;height:52px;border-radius:var(--radius-sm);border:1.5px solid #E8DDD0;background:white;font-size:22px;cursor:pointer;flex-shrink:0;" onclick="toggleFav()">🤍</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end phone shell -->
+
+<script>
+// ─── NAVIGATION ───────────────────────────────────────────────────────────
+function goTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  // Status bar color
+  const sb = document.getElementById('statusBar');
+  if (screenId === 'splash' || screenId === 'main' || screenId === 'product-detail') {
+    sb.style.background = 'var(--dark)';
+  } else if (screenId === 'login' || screenId === 'signup') {
+    sb.style.background = 'var(--dark)';
+  }
+}
+
+// ─── BOTTOM NAV ────────────────────────────────────────────────────────────
+function switchNav(tab) {
+  // hide all tabs
+  ['home','masabih','khawatim','ahjar','tuhaf','mazad','profile'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.style.display = 'none';
+  });
+  // deactivate nav items
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  // map some tabs
+  const navMap = { khawatim: 'ahjar', tuhaf: 'ahjar' };
+  const navId = navMap[tab] || tab;
+
+  const tabEl = document.getElementById('tab-' + tab);
+  if (tabEl) tabEl.style.display = 'block';
+
+  const navEl = document.getElementById('nav-' + navId);
+  if (navEl) navEl.classList.add('active');
+
+  // scroll to top
+  document.getElementById('appContent').scrollTop = 0;
+}
+
+// ─── MASABIH FILTER ────────────────────────────────────────────────────────
+function filterMasabih(type, el) {
+  document.querySelectorAll('.subcat-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const all = document.querySelectorAll('#masabihGrid .product-card');
+  all.forEach(card => {
+    if (type === 'all') { card.style.display = ''; }
+    else if (type === 'masna3') { card.style.display = card.classList.contains('masna3-item') ? '' : 'none'; }
+    else if (type === 'kahrab') { card.style.display = card.classList.contains('kahrab-item') ? '' : 'none'; }
+  });
+}
+
+// ─── PRODUCT DETAIL ────────────────────────────────────────────────────────
+function openDetail(cat, emoji, name, catLabel, count, weight, type) {
+  document.getElementById('detailEmoji').textContent = emoji;
+  document.getElementById('detailName').textContent = name;
+  document.getElementById('detailCat').textContent = catLabel;
+  document.getElementById('specCount').textContent = count === '—' ? '—' : count + ' حبة';
+  document.getElementById('specWeight').textContent = weight + ' غرام';
+  document.getElementById('specType').textContent = type;
+
+  // Price map
+  const prices = {
+    'مسبحة عقيق يماني':'25','ياقوت أزرق طبيعي':'120','خاتم فيروز طبيعي':'45',
+    'مسبحة كهرب أصيلة':'85','مسبحة كهرب بلطيق':'85','مسبحة زمرد هندي':'55',
+    'مسبحة لازورد طبيعي':'40','كهرب بلطيق أصيل':'85','كهرب ملكي قديم':'200',
+    'كهرب ليموني فاخر':'65','خاتم عقيق أحمر':'180','خاتم زمرد ملكي':'350',
+    'خاتم ياقوت أزرق':'420','زمرد كولومبي':'280','ياقوت أحمر برمي':'320',
+    'أميثيست أرجواني':'55','إبريق نحاس قديم':'95','خنجر خيزران':'150',
+    'حرز عثماني':'75','مباخر نحاسية':'60'
+  };
+  const price = prices[name] || '—';
+  document.getElementById('detailPrice').innerHTML = price + ' <small>د.ك</small>';
+
+  // BG color
+  const bgMap = {
+    'ahjar': 'linear-gradient(135deg,#E3F2FD,#90CAF955)',
+    'khawatim': 'linear-gradient(135deg,#F3E5F5,#CE93D855)',
+    'tuhaf': 'linear-gradient(135deg,#FFF8DC,#DEB88755)',
+  };
+  document.getElementById('detailImg').style.background = bgMap[cat] || 'linear-gradient(135deg,#FFF8ED,#FAF3E0)';
+
+  document.getElementById('detailFav').textContent = '🤍';
+  goTo('product-detail');
+}
+
+function toggleFav() {
+  const fav = document.getElementById('detailFav');
+  fav.textContent = fav.textContent === '🤍' ? '❤️' : '🤍';
+}
+
+// ─── AUCTION MODALS ────────────────────────────────────────────────────────
+function openAddAuction() {
+  document.getElementById('addAuctionModal').classList.add('open');
+}
+function openBidModal() {
+  document.getElementById('bidVal1').textContent = 157;
+  document.getElementById('bidModal').classList.add('open');
+}
+function openBidModal2() {
+  document.getElementById('bidVal2').textContent = 89;
+  document.getElementById('bidModal2').classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+// ─── DURATION SELECTOR ────────────────────────────────────────────────────
+let selectedDurMins = 60;
+
+function setDur(mins, el) {
+  selectedDurMins = mins;
+  document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('durSlider').value = mins;
+  updateDurDisplay(mins);
+}
+
+function onDurSlider(val) {
+  selectedDurMins = parseInt(val);
+  document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+  updateDurDisplay(selectedDurMins);
+}
+
+function updateDurDisplay(mins) {
+  let label = '';
+  if (mins < 60) label = mins + ' دقيقة';
+  else if (mins === 60) label = 'ساعة واحدة';
+  else if (mins < 120) label = 'ساعة و' + (mins-60) + ' دقيقة';
+  else if (mins % 60 === 0) label = (mins/60) + ' ساعة';
+  else label = Math.floor(mins/60) + 'س ' + (mins%60) + 'د';
+  document.getElementById('durPreview').textContent = label;
+  const v = document.getElementById('durCustomVal');
+  if (v) v.textContent = label;
+}
+function changeBid(valId, delta) {
+  const el = document.getElementById(valId);
+  let v = parseInt(el.textContent) + delta;
+  const min = valId === 'bidVal1' ? 157 : 89;
+  if (v < min) v = min;
+  el.textContent = v;
+}
+function confirmBid(bidDisplayId, bidValId, modalId) {
+  const v = parseInt(document.getElementById(bidValId).textContent);
+  document.getElementById(bidDisplayId).innerHTML = v + ' <span>د.ك</span>';
+  closeModal(modalId);
+
+  // Update price range bar + check max
+  const autoWin = updatePriceRangeBar(bidDisplayId, v);
+
+  // Sync home card bid
+  if (bidDisplayId === 'bid1') {
+    const hb = document.getElementById('homeBid');
+    if (hb) hb.innerHTML = v + ' <span>د.ك</span>';
+    const hl = document.getElementById('curBid1Lbl');
+    if (hl) hl.textContent = 'حالي: ' + v + ' د.ك';
+  }
+
+  if (autoWin) {
+    // Max price reached → auto end
+    notifCount += 2;
+    updateNotifBadge();
+    closeModal(modalId);
+    setTimeout(() => {
+      showToast('🏆 وصلت للحد الأعلى! انتهى المزاد — أنت الفائز!');
+      setTimeout(() => openWinnerModal(), 1200);
+      // Seller notification too
+      addAdminAuctionWin(bidDisplayId, v);
+    }, 500);
+  } else {
+    showToast('✅ تمت مزايدتك بـ ' + v + ' د.ك!');
+    // Add to admin log if big jump
+    notifCount++;
+    updateNotifBadge();
+  }
+}
+
+function addAdminAuctionWin(bidId, finalPrice) {
+  const cnt = document.getElementById('adminAuctionCount');
+  if (cnt) cnt.textContent = parseInt(cnt.textContent) + 1;
+  const rev = document.getElementById('adminRevenue');
+  if (rev) rev.textContent = parseInt(rev.textContent) + 2; // رسوم المزاد
+  const pb = document.getElementById('profileAdminBadge');
+  if (pb) pb.textContent = (parseInt(pb.textContent) + 1) + ' جديد';
+}
+let auctionCounter = 10;
+
+function submitAuction() {
+  const totalSecs = selectedDurMins * 60;
+  const aid = 'ua' + (++auctionCounter);
+  const barId = aid + 'Bar';
+  const startPrice = 10;
+
+  const minPrice = parseInt(document.getElementById('auctionMinPrice').value) || 10;
+  const maxPrice = parseInt(document.getElementById('auctionMaxPrice').value) || 4000;
+  const terms    = document.getElementById('auctionTerms').value.trim();
+  const termsHtml = terms ? `<div style="background:#FFFBF2;border:1px solid #F0D98A;border-radius:8px;padding:10px;margin-top:8px;font-size:11px;color:#6B5010;"><strong>📋 شروط البائع:</strong> ${terms}</div>` : '';
+
+  // Build duration label for display
+  let durTxt = selectedDurMins < 60
+    ? selectedDurMins + ' دقيقة'
+    : (selectedDurMins % 60 === 0 ? (selectedDurMins/60) + ' ساعة' : Math.floor(selectedDurMins/60)+'س '+(selectedDurMins%60)+'د');
+
+  // Inject new auction card into mazad tab
+  const container = document.getElementById('tab-mazad');
+  const card = document.createElement('div');
+  card.className = 'auction-card';
+  card.style.marginBottom = '12px';
+  card.innerHTML = `
+    <div class="auction-card-inner">
+      <div class="auction-img" style="font-size:48px;">📿</div>
+      <div class="auction-info">
+        <div class="auction-title">مسبحتي الجديدة</div>
+        <div class="auction-specs">مدة المزاد: ${durTxt} • بداية: ${minPrice} د.ك • حد أعلى: ${maxPrice} د.ك</div>
+        <div class="auction-price-range">
+          <div class="price-range-row">
+            <div class="price-range-min">بداية: ${minPrice} د.ك</div>
+            <div class="price-range-cur" id="${aid}Lbl">حالي: ${minPrice} د.ك</div>
+            <div class="price-range-max">حد: ${maxPrice} د.ك</div>
+          </div>
+          <div class="price-range-track"><div class="price-range-fill" id="${aid}PBar" style="width:0%"></div></div>
+        </div>
+        ${termsHtml}
+        <div class="auction-timer-wrap">
+          <div class="timer-top-row">
+            <div class="timer-label-txt">⏱ الوقت المتبقي</div>
+            <div class="timer-pill" id="${aid}">
+              <div class="timer-dot"></div><span>${fmt(totalSecs)}</span>
+            </div>
+          </div>
+          <div class="timer-bar-track">
+            <div class="timer-bar-fill" id="${barId}" style="width:100%"></div>
+          </div>
+        </div>
+        <div class="auction-bid-row">
+          <div class="auction-current-bid">
+            <div class="auction-bid-label">السعر الابتدائي</div>
+            <div class="auction-bid-amount" id="bidNew${auctionCounter}">${startPrice} <span>د.ك</span></div>
+          </div>
+          <button class="btn-bid" onclick="openBidModal()">زايد +1 د.ك</button>
+        </div>
+      </div>
+    </div>
+    <div class="auction-footer">
+      <div class="auction-bids-count">0 مزايدات</div>
+      <div class="auction-seller" style="color:var(--green);">✅ مزادك</div>
+    </div>`;
+
+  // Insert after auction banner section title
+  const sectionTitle = container.querySelector('.section-title');
+  sectionTitle.after(card);
+
+  // Register auction config for price range
+  auctionConfig['bidNew'+auctionCounter] = {
+    minPrice, maxPrice, currentBid: minPrice,
+    barId: aid+'PBar', lblId: aid+'Lbl', winner: 'أحمد الكويتي'
+  };
+
+  // Register timer
+  registerTimer(aid, aid, barId, totalSecs);
+
+  closeModal('addAuctionModal');
+  switchNav('mazad');
+  showToast('🎉 تم نشر مزادك لمدة ' + durTxt + '!');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  t.style.animation = 'none';
+  void t.offsetWidth;
+  t.style.animation = 'toastAnim 2.5s forwards';
+  setTimeout(() => { t.style.display = 'none'; }, 2600);
+}
+
+// ─── CLOSE MODAL ON OVERLAY CLICK ─────────────────────────────────────────
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+// Guest: lock cart & notification icons
+document.getElementById('topbarIcons').addEventListener('click', function(e) {
+  if (isGuest) { showGuestModal(); }
+});
+
+// ─── TIMER ENGINE ─────────────────────────────────────────────────────────
+// Registry: { id, pillId, barId, totalSecs, remainSecs }
+const timerRegistry = {};
+let timerTick = null;
+
+function fmt(secs) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0)
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function timerClass(secs) {
+  if (secs <= 0)   return 'ended';
+  if (secs < 300)  return 'urgent';   // < 5 min
+  if (secs < 3600) return 'warn';     // < 1 hour
+  return '';
+}
+
+function registerTimer(id, pillId, barId, totalSecs) {
+  timerRegistry[id] = { pillId, barId, totalSecs, remainSecs: totalSecs };
+}
+
+function startTimers() {
+  // Existing auctions
+  registerTimer('t1', 'timer1',   'timer1Bar',  47*60+23);
+  registerTimer('t1h','homeTimer', null,         47*60+23);
+  registerTimer('t2', 'timer2',   'timer2Bar',  5*3600+12*60+8);
+  registerTimer('t3', 'timer3',   'timer3Bar',  12*3600);
+
+  if (timerTick) clearInterval(timerTick);
+  timerTick = setInterval(() => {
+    Object.values(timerRegistry).forEach(t => {
+      if (t.remainSecs > 0) t.remainSecs--;
+
+      // pill
+      const pill = document.getElementById(t.pillId);
+      if (pill) {
+        const cls = timerClass(t.remainSecs);
+        pill.className = 'timer-pill' + (cls ? ' ' + cls : '');
+        const span = pill.querySelector('span');
+        if (span) span.textContent = t.remainSecs > 0 ? fmt(t.remainSecs) : 'انتهى المزاد';
+        if (t.remainSecs === 0) {
+          const dot = pill.querySelector('.timer-dot');
+          if (dot) dot.style.display = 'none';
+        }
+      }
+
+      // bar
+      if (t.barId) {
+        const bar = document.getElementById(t.barId);
+        if (bar) {
+          const pct = t.totalSecs > 0 ? Math.max(0, (t.remainSecs / t.totalSecs) * 100) : 0;
+          bar.style.width = pct + '%';
+          const cls = timerClass(t.remainSecs);
+          bar.className = 'timer-bar-fill' + (cls ? ' ' + cls : '');
+        }
+      }
+    });
+  }, 1000);
+}
+
+// ─── CLOCK ────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  let h = now.getHours(), m = now.getMinutes();
+  document.querySelector('.status-time').textContent = `${h}:${String(m).padStart(2,'0')}`;
+}
+setInterval(updateClock, 10000);
+updateClock();
+
+// ─── GUEST MODE ───────────────────────────────────────────────────────────
+let isGuest = false;
+
+function goToGuest() {
+  isGuest = true;
+  goTo('main');
+  // Show guest badge in topbar
+  document.getElementById('topbarIcons').innerHTML =
+    '<span class="guest-badge">👁️ ضيف</span>';
+  // Replace profile nav label
+  document.querySelector('#nav-profile .nav-label').textContent = 'تسجيل';
+  // Patch bid buttons to require login
+  document.querySelectorAll('.btn-bid, .btn-add-auction').forEach(btn => {
+    btn.addEventListener('click', guestBlock, true);
+  });
+  // Show guest toast
+  setTimeout(() => showToast('👁️ أنت تتصفح كضيف — سجّل للمزايدة والشراء'), 400);
+}
+
+function guestBlock(e) {
+  if (isGuest) {
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    showGuestModal();
+  }
+}
+
+function showGuestModal() {
+  document.getElementById('guestModal').classList.add('open');
+}
+function closeGuestModal() {
+  document.getElementById('guestModal').classList.remove('open');
+}
+
+// Override profile tab for guest
+const origSwitchNav = switchNav;
+window.switchNavOrig = origSwitchNav;
+function switchNav(tab) {
+  if (isGuest && tab === 'profile') {
+    showGuestModal();
+    return;
+  }
+  window.switchNavOrig(tab);
+}
+
+// ─── PURCHASE FLOW ────────────────────────────────────────────────────────
+let currentPurchaseName  = '';
+let currentPurchasePrice = '';
+let currentPurchaseEmoji = '';
+let orderCounter = 1;
+
+function openPurchaseConfirm() {
+  if (isGuest) { showGuestModal(); return; }
+  // Pull from current detail screen
+  currentPurchaseEmoji = document.getElementById('detailEmoji').textContent;
+  currentPurchaseName  = document.getElementById('detailName').textContent;
+  currentPurchasePrice = document.getElementById('detailPrice').textContent.replace(/<[^>]+>/g,'').trim();
+
+  document.getElementById('purchaseEmoji').textContent     = currentPurchaseEmoji;
+  document.getElementById('purchaseName').textContent      = currentPurchaseName;
+  document.getElementById('purchasePrice').textContent     = currentPurchasePrice + ' د.ك';
+  document.getElementById('purchaseNameSmall').textContent = currentPurchaseName;
+  document.getElementById('purchasePriceSmall').textContent= currentPurchasePrice + ' د.ك';
+
+  document.getElementById('purchaseConfirmModal').classList.add('open');
+}
+
+function confirmPurchase() {
+  closeModal('purchaseConfirmModal');
+  orderCounter++;
+  const orderId = 'Q8S-2026-' + String(orderCounter).padStart(4,'0');
+  document.getElementById('orderIdDisplay').textContent = orderId;
+  document.getElementById('successItemName').textContent  = currentPurchaseName;
+  document.getElementById('successItemPrice').textContent = currentPurchasePrice + ' د.ك';
+
+  // Add to admin panel
+  addAdminOrder(orderId, currentPurchaseName, currentPurchasePrice);
+
+  // Show success modal
+  document.getElementById('purchaseSuccessModal').classList.add('open');
+
+  // Notification badge
+  notifCount++;
+  updateNotifBadge();
+  showToast('✅ تم استلام طلبك! رابط الدفع سيصل للواتساب');
+}
+
+// ─── ADMIN PANEL ───────────────────────────────────────────────────────────
+let adminOrderList = [];
+
+function addAdminOrder(orderId, product, price) {
+  adminOrderList.push({ orderId, product, price });
+  // Update admin stats
+  const cnt = document.getElementById('adminOrderCount');
+  if (cnt) cnt.textContent = parseInt(cnt.textContent) + 1;
+  const rev = document.getElementById('adminRevenue');
+  if (rev) rev.textContent = parseInt(rev.textContent) + parseInt(price);
+  // Update the first visible order card with latest
+  const pnEl = document.getElementById('adminProductName');
+  const ppEl = document.getElementById('adminProductPrice');
+  if (pnEl) pnEl.textContent = product;
+  if (ppEl) ppEl.textContent = price + ' د.ك';
+  const idEl = document.querySelector('#adminOrder1 .admin-order-id');
+  if (idEl) idEl.textContent = orderId;
+  // Profile badge
+  const pb = document.getElementById('profileAdminBadge');
+  if (pb) pb.textContent = adminOrderList.length + ' جديد';
+}
+
+function openAdminPanel() {
+  document.getElementById('adminModal').classList.add('open');
+  // Hide "جديد" badge once opened
+  const nb = document.getElementById('adminNewBadge');
+  if (nb) nb.style.display = 'none';
+}
+
+// ─── AUCTION PRICE RANGE FORM ──────────────────────────────────────────────
+function updatePricePreview() {
+  const mn = document.getElementById('auctionMinPrice').value;
+  const mx = document.getElementById('auctionMaxPrice').value;
+  const preview = document.getElementById('priceRangePreview');
+  if (mn || mx) {
+    preview.style.display = 'block';
+    document.getElementById('prevMin').textContent = mn || '—';
+    document.getElementById('prevMax').textContent = mx || '—';
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+// ─── BID MAX PRICE CHECK ───────────────────────────────────────────────────
+// Auction config: { id, minPrice, maxPrice, currentBid, barId, lblId }
+const auctionConfig = {
+  'bid1':  { minPrice: 40,  maxPrice: 400,  currentBid: 156, barId: 'priceBar1', lblId: 'curBid1Lbl', winner: 'أحمد الكويتي' },
+  'bid2':  { minPrice: 60,  maxPrice: 250,  currentBid: 88,  barId: 'priceBar2', lblId: 'curBid2Lbl', winner: 'أحمد الكويتي' },
+  'bid3':  { minPrice: 30,  maxPrice: 200,  currentBid: 45,  barId: 'priceBar3', lblId: 'curBid3Lbl', winner: 'أحمد الكويتي' },
+};
+
+function updatePriceRangeBar(bidId, newBid) {
+  const cfg = auctionConfig[bidId];
+  if (!cfg) return false;
+  cfg.currentBid = newBid;
+  const pct = Math.min(100, ((newBid - cfg.minPrice) / (cfg.maxPrice - cfg.minPrice)) * 100);
+  const bar = document.getElementById(cfg.barId);
+  if (bar) bar.style.width = pct + '%';
+  const lbl = document.getElementById(cfg.lblId);
+  if (lbl) lbl.textContent = 'حالي: ' + newBid + ' د.ك';
+  // Auto-win if max reached
+  if (newBid >= cfg.maxPrice) return true; // trigger win
+  return false;
+}
+
+// ─── OPTION SELECTOR (contact / delivery) ─────────────────────────────────
+function selectOpt(el, group) {
+  el.closest('.option-selector').querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+function toggleDeliveryAddr(show) {
+  document.getElementById('deliveryAddrWrap').style.display = show ? 'block' : 'none';
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────
+let notifCount = 3;
+
+function openNotifSheet() {
+  if (isGuest) { showGuestModal(); return; }
+  document.getElementById('notifSheetModal').classList.add('open');
+}
+
+function clearNotifs() {
+  document.querySelectorAll('.notif-item.unread').forEach(n => n.classList.remove('unread'));
+  notifCount = 0;
+  updateNotifBadge();
+  showToast('✅ تم مسح جميع الإشعارات');
+}
+
+function updateNotifBadge() {
+  const badge = document.getElementById('notifBadge');
+  if (!badge) return;
+  if (notifCount > 0) {
+    badge.classList.add('show');
+    badge.textContent = notifCount;
+  } else {
+    badge.classList.remove('show');
+  }
+}
+
+// ─── AUCTION END / WIN FLOW ───────────────────────────────────────────────
+function simulateAuctionEnd() {
+  // Trigger "انتهى المزاد" on first card's timer
+  const t = timerRegistry['t1'];
+  if (t) { t.remainSecs = 0; }
+  const t1h = timerRegistry['t1h'];
+  if (t1h) { t1h.remainSecs = 0; }
+
+  // Show notifications
+  notifCount += 2;
+  updateNotifBadge();
+  showToast('🏁 انتهى المزاد! راجع الإشعارات');
+
+  // Auto open winner modal after short delay
+  setTimeout(() => {
+    openNotifSheet();
+  }, 1000);
+}
+
+// ─── WINNER & SELLER MODALS ───────────────────────────────────────────────
+function openWinnerModal() {
+  document.getElementById('winnerModal').classList.add('open');
+  // Decrement unread
+  notifCount = Math.max(0, notifCount - 1);
+  updateNotifBadge();
+}
+function openSellerModal() {
+  document.getElementById('sellerModal').classList.add('open');
+  notifCount = Math.max(0, notifCount - 1);
+  updateNotifBadge();
+}
+function openPaymentReceived() {
+  document.getElementById('paymentReceivedModal').classList.add('open');
+  notifCount = Math.max(0, notifCount - 1);
+  updateNotifBadge();
+}
+
+// ─── PAYMENT LINK ─────────────────────────────────────────────────────────
+let selectedPlatform = 'MyFatoorah';
+
+function openPaymentLinkModal() {
+  document.getElementById('paymentLinkModal').classList.add('open');
+}
+function selectPlatform(el, name) {
+  selectedPlatform = name;
+  document.querySelectorAll('.platform-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+function sendPaymentLink() {
+  const link = document.getElementById('paymentLinkInput').value.trim();
+  closeModal('paymentLinkModal');
+  // Add notification for buyer receiving link
+  notifCount++;
+  updateNotifBadge();
+  showToast('✅ تم إرسال رابط الدفع للمشتري!');
+  // Show in notif sheet as new item
+}
+
+// ─── REPORT NON-PAYMENT ───────────────────────────────────────────────────
+function openReportModal() {
+  document.getElementById('reportModal').classList.add('open');
+}
+function confirmReport() {
+  closeModal('reportModal');
+  setTimeout(() => {
+    document.getElementById('bannedModal').classList.add('open');
+  }, 400);
+}
+
+// ─── INIT NOTIF BADGE ─────────────────────────────────────────────────────
+updateNotifBadge();
+
+// ─── SPLASH → LOGIN ───────────────────────────────────────────────────────
+setTimeout(() => { goTo('login'); }, 2200);
+startTimers();
+</script>
+</body>
+</html>

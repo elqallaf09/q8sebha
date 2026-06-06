@@ -1,0 +1,73 @@
+import 'package:flutter/material.dart';
+import '../models/models.dart';
+import '../services/api_service.dart';
+import '../services/websocket_service.dart';
+
+enum AppState { splash, auth, main, guest }
+
+class AuthProvider extends ChangeNotifier {
+  AppState appState = AppState.splash;
+  User? currentUser;
+  bool isLoading = false;
+  String? errorMessage;
+
+  final _api = APIService.instance;
+  final _ws  = WebSocketService.instance;
+
+  AuthProvider() { _checkSession(); }
+
+  Future<void> _checkSession() async {
+    await Future.delayed(const Duration(milliseconds:1500));
+    final token = await TokenStore.getAccess();
+    if (token == null) { appState = AppState.auth; notifyListeners(); return; }
+    try {
+      final r = await _api.me();
+      currentUser = User.fromJson(r['data']);
+      _ws.connect(currentUser!.id);
+      appState = AppState.main;
+    } catch (_) { appState = AppState.auth; }
+    notifyListeners();
+  }
+
+  Future<void> login(String phone, String password) async {
+    isLoading = true; errorMessage = null; notifyListeners();
+    try {
+      final r = await _api.login(phone, password);
+      final d = r['data'];
+      await TokenStore.save(d['access_token'], d['refresh_token']);
+      currentUser = User.fromJson(d['user']);
+      _ws.connect(currentUser!.id);
+      appState = AppState.main;
+    } on APIError catch (e) { errorMessage = e.message; }
+    catch (_) { errorMessage = 'خطأ في الاتصال بالخادم'; }
+    isLoading = false; notifyListeners();
+  }
+
+  Future<void> register(String name, String phone, String password, {String? email}) async {
+    isLoading = true; errorMessage = null; notifyListeners();
+    try {
+      final r = await _api.register(name, phone, password, email:email);
+      final d = r['data'];
+      await TokenStore.save(d['access_token'], d['refresh_token']);
+      currentUser = User.fromJson(d['user']);
+      _ws.connect(currentUser!.id);
+      appState = AppState.main;
+    } on APIError catch (e) { errorMessage = e.message; }
+    catch (_) { errorMessage = 'خطأ في الاتصال بالخادم'; }
+    isLoading = false; notifyListeners();
+  }
+
+  void continueAsGuest() { appState = AppState.guest; notifyListeners(); }
+
+  Future<void> logout() async {
+    await _api.logout();
+    _ws.disconnect();
+    currentUser = null;
+    appState = AppState.auth;
+    notifyListeners();
+  }
+
+  bool get isGuest    => appState == AppState.guest;
+  bool get isLoggedIn => currentUser != null;
+  bool get isAdmin    => currentUser?.isAdmin == true;
+}
