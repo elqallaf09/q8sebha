@@ -1,10 +1,9 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/models.dart';
+import '../config/app_config.dart';
 
 // ─── مفاتيح التخزين ───────────────────────────────────────────────────────
 class TokenStore {
@@ -36,18 +35,7 @@ class APIService {
   static final APIService instance = APIService._();
   APIService._();
 
-  // يكشف الـ platform تلقائياً
-  static const _prodUrl = 'https://q8sebha-production.up.railway.app/api';
-  static const _devAndroid = 'http://10.0.2.2:3000/api';
-  static const _devWeb = 'http://localhost:3000/api';
-
-  static String get baseUrl {
-    const bool isProduction = bool.fromEnvironment('dart.vm.product');
-    if (isProduction) return _prodUrl;
-    if (kIsWeb) return _devWeb;
-    if (!kIsWeb && Platform.isAndroid) return _devAndroid;
-    return _devWeb;
-  }
+  static String get baseUrl => AppConfig.apiUrl;
 
   // ─── طلب عام ─────────────────────────────────────────────────────────
   Future<Map<String,dynamic>> request(
@@ -193,4 +181,43 @@ class APIService {
 
   Future<void> markRead(int id)  => request('PATCH', '/notifications/$id/read');
   Future<void> markAllRead()     => request('POST',  '/notifications/read-all');
+
+  // ─── Admin ───────────────────────────────────────────────────────────────
+  Future<Map<String,dynamic>> adminStats()  => request('GET', '/admin/stats');
+
+  Future<Map<String,dynamic>> adminUsers({int page=1, String? search}) {
+    var q = '?page=$page';
+    if (search != null && search.isNotEmpty) q += '&search=${Uri.encodeComponent(search)}';
+    return request('GET', '/admin/users$q');
+  }
+
+  Future<void> adminBanUser(int id, bool ban) =>
+      request('PATCH', '/admin/users/$id/${ban ? 'ban' : 'unban'}');
+
+  Future<void> adminSetRole(int id, String role) =>
+      request('PATCH', '/admin/users/$id/role', body: {'role': role});
+
+  Future<Map<String,dynamic>> adminAuctions({int page=1}) =>
+      request('GET', '/admin/auctions?page=$page');
+
+  Future<void> adminEndAuction(int id) =>
+      request('PATCH', '/admin/auctions/$id/end');
+
+  Future<Map<String,dynamic>> adminCategories() =>
+      request('GET', '/admin/categories');
+
+  Future<Map<String,dynamic>> adminAddCategory(String name, String slug, String emoji) =>
+      request('POST', '/admin/categories', body: {'name': name, 'slug': slug, 'emoji': emoji});
+
+  Future<void> adminDeleteCategory(int id) =>
+      request('DELETE', '/admin/categories/$id');
+
+  Future<Map<String,dynamic>> adminAddProduct(Map<String,dynamic> data) =>
+      request('POST', '/products', body: data);
+
+  Future<Map<String,dynamic>> adminUpdateProduct(int id, Map<String,dynamic> data) =>
+      request('PUT', '/products/$id', body: data);
+
+  Future<void> adminDeleteProduct(int id) =>
+      request('DELETE', '/products/$id');
 }

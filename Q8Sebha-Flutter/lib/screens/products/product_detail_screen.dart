@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../main.dart';
+import '../../config/app_config.dart';
 import '../../widgets/common_widgets.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -37,7 +38,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           SizedBox(height:280, child:Stack(children:[
             p.imageUrls.isEmpty
               ? Container(color:Colors.grey.shade100, child:Center(child:Text(p.emoji,style:const TextStyle(fontSize:100))))
-              : Image.network('http://10.0.2.2:3000/uploads/${p.primaryImage}',
+              : Image.network(AppConfig.imageUrl(p.primaryImage),
                   width:double.infinity, height:280, fit:BoxFit.cover,
                   errorBuilder:(_,__,___)=>Center(child:Text(p.emoji,style:const TextStyle(fontSize:100)))),
             if (p.badge!=null) Positioned(top:12,right:12,

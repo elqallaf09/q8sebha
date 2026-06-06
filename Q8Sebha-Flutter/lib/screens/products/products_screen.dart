@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/product_provider.dart';
 import '../../models/models.dart';
 import '../../main.dart';
+import '../../config/app_config.dart';
 import '../../widgets/common_widgets.dart';
 import 'product_detail_screen.dart';
 
@@ -11,91 +12,211 @@ class ProductsScreen extends StatefulWidget {
   @override State<ProductsScreen> createState() => _ProductsScreenState();
 }
 
-class _ProductsScreenState extends State<ProductsScreen> {
+class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProviderStateMixin {
   String? _category;
   final _search = TextEditingController();
+  late final AnimationController _animCtrl;
 
   static const _cats = [
-    {'emoji':'🔍','name':'الكل','slug':null},
-    {'emoji':'📿','name':'مسابيح','slug':'misbaha'},
-    {'emoji':'💍','name':'خواتم','slug':'rings'},
-    {'emoji':'💎','name':'أحجار','slug':'gemstones'},
-    {'emoji':'🏺','name':'تحف','slug':'antiques'},
+    {'emoji': '✨', 'name': 'الكل',    'slug': null},
+    {'emoji': '📿', 'name': 'مسابيح', 'slug': 'misbaha'},
+    {'emoji': '💎', 'name': 'أحجار',  'slug': 'gemstones'},
+    {'emoji': '💍', 'name': 'خواتم',  'slug': 'rings'},
+    {'emoji': '🏺', 'name': 'تحف',    'slug': 'antiques'},
   ];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) =>
-        context.read<ProductProvider>().fetchProducts());
+    _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductProvider>().fetchProducts();
+      _animCtrl.forward();
+    });
   }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _doSearch() =>
+      context.read<ProductProvider>().fetchProducts(category: _category, search: _search.text);
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ProductProvider>();
     return Scaffold(
-      appBar: AppBar(title:const Text('Q8Sebha 📿'), centerTitle:true),
-      body: Column(children:[
-        // بحث
-        Padding(
-          padding:const EdgeInsets.fromLTRB(16,12,16,0),
-          child:TextField(
-            controller:_search, textAlign:TextAlign.right,
-            decoration:InputDecoration(
-              hintText:'ابحث عن مسباح...',
-              suffixIcon:IconButton(icon:const Icon(Icons.search), onPressed:_doSearch),
-              prefixIcon:_search.text.isNotEmpty?IconButton(icon:const Icon(Icons.close),onPressed:(){_search.clear();_doSearch();}):null,
-            ),
-            onSubmitted:(_)=>_doSearch(),
-          ),
-        ),
-        // فئات
-        SizedBox(height:52, child:ListView.builder(
-          scrollDirection:Axis.horizontal, padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),
-          itemCount:_cats.length,
-          itemBuilder:(_, i) {
-            final c = _cats[i];
-            final isSelected = _category == c['slug'];
-            return GestureDetector(
-              onTap:(){ setState(()=>_category=c['slug'] as String?); context.read<ProductProvider>().fetchProducts(category:_category); },
-              child:Container(
-                margin:const EdgeInsets.only(left:8),
-                padding:const EdgeInsets.symmetric(horizontal:14,vertical:6),
-                decoration:BoxDecoration(
-                  color:isSelected?AppTheme.primary:Colors.grey.shade100,
-                  borderRadius:BorderRadius.circular(20)),
-                child:Row(children:[
-                  Text(c['emoji'] as String, style:const TextStyle(fontSize:14)),
-                  const SizedBox(width:4),
-                  Text(c['name'] as String,
-                    style:TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w600,fontSize:13,
-                      color:isSelected?Colors.white:Colors.black87)),
-                ]),
-              ),
-            );
-          },
-        )),
-        // محتوى
-        Expanded(child: vm.isLoading
-          ? const LoadingBody()
-          : vm.products.isEmpty
-            ? const EmptyState(emoji:'📦', message:'لا توجد منتجات')
-            : RefreshIndicator(
-                onRefresh:()=>context.read<ProductProvider>().fetchProducts(category:_category),
-                child:GridView.builder(
-                  padding:const EdgeInsets.all(16),
-                  gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount:2, crossAxisSpacing:14, mainAxisSpacing:14, childAspectRatio:0.68),
-                  itemCount:vm.products.length,
-                  itemBuilder:(_, i) => _ProductCard(product:vm.products[i]),
+      backgroundColor: AppTheme.bg,
+      body: CustomScrollView(
+        slivers: [
+          // ─── AppBar ─────────────────────────────────────────────────────
+          SliverAppBar(
+            expandedHeight: 130,
+            floating: false,
+            pinned: true,
+            backgroundColor: AppTheme.primary,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(gradient: AppTheme.gradient),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(children: [
+                                Text('📿', style: TextStyle(fontSize: 14)),
+                                SizedBox(width: 6),
+                                Text('Q8Sebha',
+                                    style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
+                                        fontSize: 14, color: Colors.white)),
+                              ]),
+                            ),
+                            const Text('مرحباً بك 👋',
+                                style: TextStyle(fontFamily: 'Tajawal', fontSize: 14,
+                                    color: Colors.white70)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Text('اكتشف أجمل المسابيح والأحجار الكريمة',
+                            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
+                                fontSize: 18, color: Colors.white),
+                            textAlign: TextAlign.right),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-        ),
-      ]),
+            ),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(56),
+              child: Container(
+                color: AppTheme.primary,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: TextField(
+                  controller: _search,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'ابحث عن منتج...',
+                    fillColor: Colors.white,
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.search, color: AppTheme.primary),
+                      onPressed: _doSearch,
+                    ),
+                    prefixIcon: _search.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close, color: Colors.grey),
+                            onPressed: () { _search.clear(); _doSearch(); })
+                        : null,
+                  ),
+                  onSubmitted: (_) => _doSearch(),
+                ),
+              ),
+            ),
+          ),
+
+          // ─── فلتر الفئات ─────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 50,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: _cats.length,
+                itemBuilder: (_, i) {
+                  final c = _cats[i];
+                  final selected = _category == c['slug'];
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _category = c['slug'] as String?);
+                      context.read<ProductProvider>().fetchProducts(category: _category);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(left: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                      decoration: BoxDecoration(
+                        gradient: selected ? AppTheme.gradient : null,
+                        color: selected ? null : Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: selected ? Colors.transparent : Colors.grey.shade200,
+                        ),
+                        boxShadow: selected ? [
+                          BoxShadow(color: AppTheme.primary.withOpacity(0.3),
+                              blurRadius: 8, offset: const Offset(0, 3))
+                        ] : [],
+                      ),
+                      child: Row(children: [
+                        Text(c['emoji'] as String, style: const TextStyle(fontSize: 14)),
+                        const SizedBox(width: 5),
+                        Text(c['name'] as String,
+                            style: TextStyle(
+                              fontFamily: 'Tajawal', fontWeight: FontWeight.w600,
+                              fontSize: 13, color: selected ? Colors.white : AppTheme.textMid,
+                            )),
+                      ]),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          // ─── عدد النتائج ─────────────────────────────────────────────
+          if (!vm.isLoading && vm.products.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+                child: Text('${vm.products.length} منتج',
+                    style: AppText.caption, textAlign: TextAlign.right),
+              ),
+            ),
+
+          // ─── المحتوى ─────────────────────────────────────────────────
+          if (vm.isLoading)
+            const SliverFillRemaining(child: LoadingBody())
+          else if (vm.products.isEmpty)
+            const SliverFillRemaining(child: EmptyState(emoji: '📦', message: 'لا توجد منتجات'))
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.70,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (_, i) => _ProductCard(product: vm.products[i]),
+                  childCount: vm.products.length,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
-
-  void _doSearch() => context.read<ProductProvider>().fetchProducts(category:_category, search:_search.text);
 }
 
 // ─── بطاقة المنتج ─────────────────────────────────────────────────────────
@@ -105,36 +226,122 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-    onTap:()=>Navigator.push(context, MaterialPageRoute(builder:(_)=>ProductDetailScreen(productId:product.id))),
-    child:Card(
-      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch, children:[
-        Expanded(
-          flex:3,
-          child:Stack(children:[
-            ClipRRect(
-              borderRadius:const BorderRadius.vertical(top:Radius.circular(16)),
-              child:product.imageUrls.isEmpty
-                ? Container(color:Colors.grey.shade50, child:Center(child:Text(product.emoji, style:const TextStyle(fontSize:50))))
-                : Image.network('http://10.0.2.2:3000/uploads/${product.primaryImage}',
-                    fit:BoxFit.cover, width:double.infinity,
-                    errorBuilder:(_,__,___)=>Center(child:Text(product.emoji, style:const TextStyle(fontSize:50)))),
+    onTap: () => Navigator.push(context,
+        MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id))),
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.06),
+              blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ─── الصورة
+          Expanded(
+            flex: 3,
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  child: product.imageUrls.isEmpty
+                      ? Container(
+                          color: const Color(0xFFF0EDE8),
+                          child: Center(
+                            child: Text(product.emoji,
+                                style: const TextStyle(fontSize: 52)),
+                          ))
+                      : Image.network(
+                          AppConfig.imageUrl(product.primaryImage),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          loadingBuilder: (_, child, progress) => progress == null
+                              ? child
+                              : Container(
+                                  color: const Color(0xFFF0EDE8),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                        color: AppTheme.primary, strokeWidth: 2),
+                                  )),
+                          errorBuilder: (_, __, ___) => Container(
+                            color: const Color(0xFFF0EDE8),
+                            child: Center(
+                              child: Text(product.emoji,
+                                  style: const TextStyle(fontSize: 52)),
+                            )),
+                        ),
+                ),
+                // badge
+                if (product.badge != null)
+                  Positioned(
+                    top: 8, right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [Color(0xFFE53935), Color(0xFFC62828)]),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(product.badge!,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 10,
+                              fontWeight: FontWeight.bold, fontFamily: 'Tajawal')),
+                    ),
+                  ),
+                // تدرج سفلي للنص
+                Positioned(
+                  bottom: 0, left: 0, right: 0,
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(0)),
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [Colors.black.withOpacity(0.15), Colors.transparent],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            if (product.badge != null) Positioned(top:8, right:8,
-              child:Container(
-                padding:const EdgeInsets.symmetric(horizontal:8,vertical:3),
-                decoration:BoxDecoration(color:Colors.red, borderRadius:BorderRadius.circular(8)),
-                child:Text(product.badge!, style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.bold)),
-              )),
-          ]),
-        ),
-        Expanded(flex:2,child:Padding(
-          padding:const EdgeInsets.all(10),
-          child:Column(crossAxisAlignment:CrossAxisAlignment.end, mainAxisAlignment:MainAxisAlignment.spaceBetween, children:[
-            Text(product.name, style:const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w600,fontSize:13), maxLines:2, textAlign:TextAlign.right),
-            Text(product.priceFormatted, style:const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700,fontSize:14,color:AppTheme.primary)),
-          ]),
-        )),
-      ]),
+          ),
+
+          // ─── المعلومات
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(product.name,
+                    style: AppText.heading3,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(product.priceFormatted,
+                          style: AppText.price.copyWith(fontSize: 13)),
+                    ),
+                    Text(product.emoji, style: const TextStyle(fontSize: 16)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }

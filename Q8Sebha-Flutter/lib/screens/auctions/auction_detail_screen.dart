@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auction_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../main.dart';
+import '../../config/app_config.dart';
 import '../../widgets/common_widgets.dart';
 
 class AuctionDetailScreen extends StatefulWidget {
@@ -46,7 +47,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
           SizedBox(height:260,child:Stack(children:[
             a.imageUrls.isEmpty
               ? Container(color:Colors.grey.shade100,child:const Center(child:Text('📿',style:TextStyle(fontSize:100))))
-              : Image.network('http://10.0.2.2:3000/uploads/${a.primaryImage}',
+              : Image.network(AppConfig.imageUrl(a.primaryImage),
                   width:double.infinity,height:260,fit:BoxFit.cover,
                   errorBuilder:(_,__,___)=>const Center(child:Text('📿',style:TextStyle(fontSize:100)))),
             // حالة وعداد

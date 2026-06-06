@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:web_socket_channel/web_socket_channel.dart';
+import '../config/app_config.dart';
 
 typedef BidCallback      = void Function(int auctionId, double amount, String? bidderName);
 typedef NotifCallback    = void Function(String title, String body, String icon);
@@ -21,10 +20,7 @@ class WebSocketService {
 
   void connect(int userId) {
     disconnect();
-    const bool isProduction = bool.fromEnvironment('dart.vm.product');
-    final uri = isProduction
-        ? Uri.parse('wss://q8sebha-production.up.railway.app/ws?user_id=$userId')
-        : Uri.parse('ws://${(!kIsWeb && Platform.isAndroid) ? '10.0.2.2' : 'localhost'}:3000/ws?user_id=$userId');
+    final uri = Uri.parse('${AppConfig.wsUrl}?user_id=$userId');
     _channel = WebSocketChannel.connect(uri);
     _channel!.stream.listen(_onMessage, onError: (_) => _reconnect(userId), onDone: () => _reconnect(userId));
     _startPing();

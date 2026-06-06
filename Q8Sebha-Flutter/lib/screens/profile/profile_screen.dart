@@ -112,8 +112,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         )),
       ]),
 
-      // لوحة الأدمن — مرئية دائماً (قيّدها لاحقاً)
-      if (true || u.role == 'admin' || u.role == 'seller')
+      // لوحة الأدمن — للأدمن فقط
+      if (u.role == 'admin' || u.role == 'moderator')
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           child: OutlinedButton.icon(
