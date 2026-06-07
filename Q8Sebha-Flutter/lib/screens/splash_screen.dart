@@ -1,15 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../main.dart';
 import 'auth/login_screen.dart';
 import 'home/main_screen.dart';
+import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
   @override State<SplashScreen> createState() => _SplashScreenState();
 }
 
+// ─── يقرر: Onboarding أو Login مباشرة ────────────────────────────────────
+class _AuthOrOnboarding extends StatefulWidget {
+  const _AuthOrOnboarding();
+  @override State<_AuthOrOnboarding> createState() => _AuthOrOnboardingState();
+}
+
+class _AuthOrOnboardingState extends State<_AuthOrOnboarding> {
+  bool? _showOnboarding;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final prefs = await SharedPreferences.getInstance();
+    final done  = prefs.getBool('onboarding_done') ?? false;
+    if (mounted) setState(() => _showOnboarding = !done);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showOnboarding == null) return const SizedBox.shrink();
+    return _showOnboarding! ? const OnboardingScreen() : const LoginScreen();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
@@ -45,9 +76,9 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (_, auth, __) {
-        if (auth.appState == AppState.auth)    return const LoginScreen();
-        if (auth.appState == AppState.main)    return const MainScreen();
-        if (auth.appState == AppState.guest)   return const MainScreen();
+        if (auth.appState == AppState.main)   return const MainScreen();
+        if (auth.appState == AppState.guest)  return const MainScreen();
+        if (auth.appState == AppState.auth)   return const _AuthOrOnboarding();
         // loading أو splash → يكمل تحميل السبلاش
 
         return Scaffold(
