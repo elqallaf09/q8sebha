@@ -25,7 +25,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final r = await _api.me().timeout(const Duration(seconds: 8));
       currentUser = User.fromJson(r['data']);
-      _ws.connect(currentUser!.id);
+      await _ws.connectWithToken();
       appState = AppState.main;
     } catch (_) {
       // السيرفر مفقود أو token منتهي → login
@@ -48,7 +48,7 @@ class AuthProvider extends ChangeNotifier {
       final d = r['data'];
       await TokenStore.save(d['access_token'], d['refresh_token']);
       currentUser = User.fromJson(d['user']);
-      _ws.connect(currentUser!.id);
+      await _ws.connectWithToken();
       appState = AppState.main;
 
       // احفظ بيانات البيومتري إذا طُلب ذلك
@@ -69,7 +69,7 @@ class AuthProvider extends ChangeNotifier {
       final d = r['data'];
       await TokenStore.save(d['access_token'], d['refresh_token']);
       currentUser = User.fromJson(d['user']);
-      _ws.connect(currentUser!.id);
+      await _ws.connectWithToken();
       appState = AppState.main;
     } on APIError catch (e) { errorMessage = e.message; }
     catch (_) { errorMessage = 'خطأ في الاتصال بالخادم'; }

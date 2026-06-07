@@ -124,6 +124,8 @@ router.post('/login', [
     if (device_token) await db.query('UPDATE users SET device_token=$1 WHERE id=$2', [device_token, user.id]);
 
     const { access, refresh } = generateTokens(user.id);
+    // احذف التوكنات القديمة لنفس المستخدم قبل إضافة الجديد
+    await db.query('DELETE FROM refresh_tokens WHERE user_id=$1', [user.id]);
     await db.query(
       `INSERT INTO refresh_tokens (user_id,token,expires_at) VALUES ($1,$2,NOW()+INTERVAL '30 days')`,
       [user.id, refresh]

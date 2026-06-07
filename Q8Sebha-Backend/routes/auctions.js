@@ -45,18 +45,45 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { rows } = await db.query(`
-      SELECT a.*, u.name AS seller_name, u.phone AS seller_phone, u.contact_method AS seller_contact,
-             w.name AS winner_name, w.phone AS winner_phone
+      SELECT a.*, u.name AS seller_name, u.contact_method AS seller_contact,
+             w.name AS winner_name
       FROM auctions a JOIN users u ON u.id=a.seller_id LEFT JOIN users w ON w.id=a.winner_id
       WHERE a.id=$1`, [req.params.id]);
 
     if (!rows.length) return res.status(404).json({ success: false, message: 'المزاد غير موجود' });
 
+    const auction = rows[0];
+
+    // الهاتف يظهر للمستخدم المسجّل فقط (من header Authorization)
+    let sellerPhone = null, winnerPhone = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
+        // المستخدم مسجّل → أرجع الهاتف
+        const phones = await db.query(
+          `SELECT u.phone AS seller_phone, w.phone AS winner_phone
+           FROM auctions a
+           JOIN users u ON u.id=a.seller_id
+           LEFT JOIN users w ON w.id=a.winner_id
+           WHERE a.id=$1`, [req.params.id]);
+        sellerPhone = phones.rows[0]?.seller_phone || null;
+        winnerPhone = phones.rows[0]?.winner_phone || null;
+      } catch (_) {}
+    }
+
     const bids = (await db.query(`
-      SELECT b.*, u.name AS bidder_name FROM bids b JOIN users u ON u.id=b.bidder_id
+      SELECT b.amount, b.created_at, u.name AS bidder_name
+      FROM bids b JOIN users u ON u.id=b.bidder_id
       WHERE b.auction_id=$1 ORDER BY b.amount DESC LIMIT 10`, [req.params.id])).rows;
 
-    res.json({ success: true, data: { ...rows[0], recent_bids: bids } });
+    res.json({ success: true, data: {
+      ...auction,
+      seller_phone: sellerPhone,
+      winner_phone: winnerPhone,
+      recent_bids: bids,
+    }});
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
@@ -91,16 +118,14 @@ router.post('/', authenticate, [
     const notifTitle = '🔨 مزاد جديد!';
     const notifBody  = `${title} — ابتداءً من ${starting_price} د.ك — المدة: ${durText}`;
 
-    const allUsers = (await db.query("SELECT id, device_token FROM users WHERE id != $1", [req.user.id])).rows;
-    const deviceTokens = [];
+    // INSERT واحد لكل المستخدمين بدل N+1 loop
+    await db.query(`
+      INSERT INTO notifications (user_id,type,title,body,icon,data)
+      SELECT id,'auction',$1,$2,'🔨',$3 FROM users WHERE id != $4
+    `, [notifTitle, notifBody, JSON.stringify({ auction_id: rows[0].id }), req.user.id]);
 
-    for (const u of allUsers) {
-      await db.query(
-        `INSERT INTO notifications (user_id,type,title,body,icon,data) VALUES ($1,'auction',$2,$3,'🔨',$4)`,
-        [u.id, notifTitle, notifBody, JSON.stringify({ auction_id: rows[0].id })]
-      );
-      if (u.device_token) deviceTokens.push(u.device_token);
-    }
+    const allUsers = (await db.query('SELECT device_token FROM users WHERE id != $1 AND device_token IS NOT NULL', [req.user.id])).rows;
+    const deviceTokens = allUsers.map(u => u.device_token);
 
     // إرسال FCM push notification للجميع
     const { sendToTokens } = require('../utils/fcm');

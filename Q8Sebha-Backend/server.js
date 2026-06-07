@@ -68,11 +68,41 @@ app.use('/api/auth/forgot-password', resetLimiter);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ─── WebSocket ────────────────────────────────────────────────────────────
+// ─── WebSocket (مع مصادقة JWT + Heartbeat) ───────────────────────────────
+const jwt = require('jsonwebtoken');
 const wss = new WebSocketServer({ server, path: '/ws' });
 global.wsClients = {};
+
+// Heartbeat: يحذف الاتصالات الميتة كل 30 ثانية
+const heartbeat = setInterval(() => {
+  wss.clients.forEach(ws => {
+    if (!ws.isAlive) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30_000);
+wss.on('close', () => clearInterval(heartbeat));
+
 wss.on('connection', (ws, req) => {
-  const userId = new URL(req.url, 'http://localhost').searchParams.get('user_id');
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+
+  // التحقق من الـ token
+  const url    = new URL(req.url, 'http://localhost');
+  const token  = url.searchParams.get('token');
+  const guestId = url.searchParams.get('guest'); // زوار بدون account
+  let userId = null;
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = String(decoded.id);
+    } catch (_) {
+      ws.close(4001, 'token_invalid');
+      return;
+    }
+  }
+  // إذا كان زائراً (guest) نسمح بالاتصال للـ broadcast العام بدون user_id
   if (userId) global.wsClients[userId] = ws;
   ws.on('close', () => { if (userId) delete global.wsClients[userId]; });
   ws.send(JSON.stringify({ type: 'connected' }));
