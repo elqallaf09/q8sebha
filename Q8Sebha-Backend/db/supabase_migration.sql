@@ -41,6 +41,13 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS rating NUMERIC DEFAULT 5.0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified INTEGER DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned INTEGER DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason TEXT;
+-- حقول العنوان التفصيلية
+ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_country TEXT DEFAULT 'الكويت';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_block TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_street TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_avenue TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_house TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_apartment TEXT;
 
 -- ─── 2. جدول refresh_tokens ───────────────────────────────────────
 CREATE TABLE IF NOT EXISTS refresh_tokens (

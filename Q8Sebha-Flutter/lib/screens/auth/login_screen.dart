@@ -213,9 +213,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (_isSignup) ...[
                     Q8Field(hint: 'الاسم الكامل *', controller: _name, icon: Icons.person),
                     const SizedBox(height: 12),
-                    Q8Field(hint: 'اسم المستخدم (اختياري)', controller: _username, icon: Icons.alternate_email),
+                    Q8Field(hint: 'اسم المستخدم *', controller: _username, icon: Icons.alternate_email),
                     const SizedBox(height: 12),
-                    Q8Field(hint: 'البريد الإلكتروني (اختياري)', controller: _email,
+                    Q8Field(hint: 'البريد الإلكتروني *', controller: _email,
                         icon: Icons.email, keyboard: TextInputType.emailAddress),
                     const SizedBox(height: 12),
                   ],
@@ -333,9 +333,30 @@ class _LoginScreenState extends State<LoginScreen> {
                     isLoading: auth.isLoading,
                     onTap: () {
                       if (_isSignup) {
-                        auth.register(_name.text, _fullPhone, _password.text,
-                            email: _email.text.isEmpty ? null : _email.text,
-                            username: _username.text.isEmpty ? null : _username.text);
+                        // التحقق من الحقول الإجبارية
+                        if (_name.text.trim().isEmpty) {
+                          auth.errorMessage = 'الاسم الكامل مطلوب';
+                          return;
+                        }
+                        if (_username.text.trim().isEmpty) {
+                          auth.errorMessage = 'اسم المستخدم مطلوب';
+                          return;
+                        }
+                        if (_email.text.trim().isEmpty) {
+                          auth.errorMessage = 'البريد الإلكتروني مطلوب';
+                          return;
+                        }
+                        if (_phone.text.trim().isEmpty) {
+                          auth.errorMessage = 'رقم الهاتف مطلوب';
+                          return;
+                        }
+                        if (_password.text.length < 6) {
+                          auth.errorMessage = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                          return;
+                        }
+                        auth.register(_name.text.trim(), _fullPhone, _password.text,
+                            email: _email.text.trim(),
+                            username: _username.text.trim());
                       } else {
                         auth.login(_loginIdentifier, _password.text);
                       }

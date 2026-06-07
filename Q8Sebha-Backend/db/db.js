@@ -152,9 +152,15 @@ const init = async () => {
   // ─── Migrations — تضاف تلقائياً إذا لم تكن موجودة ──────────────────────
   const migrations = [
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS device_token TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_country TEXT DEFAULT 'الكويت'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_block TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_street TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_avenue TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_house TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_apartment TEXT`,
     `ALTER TABLE auctions ADD COLUMN IF NOT EXISTS reserve_price NUMERIC`,
     `ALTER TABLE auctions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS device_token TEXT`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (_) { /* already exists */ }

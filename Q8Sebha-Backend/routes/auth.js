@@ -15,26 +15,27 @@ const generateTokens = (userId) => ({
 
 // ─── POST /auth/register ──────────────────────────────────────────────────
 router.post('/register', [
-  body('name').trim().notEmpty(),
-  body('phone').trim().notEmpty(),
-  body('email').optional().isEmail(),
-  body('password').isLength({ min: 6 }),
+  body('name').trim().notEmpty().withMessage('الاسم الكامل مطلوب'),
+  body('phone').trim().notEmpty().withMessage('رقم الهاتف مطلوب'),
+  body('email').trim().notEmpty().withMessage('البريد الإلكتروني مطلوب').isEmail().withMessage('البريد الإلكتروني غير صحيح'),
+  body('username').trim().notEmpty().withMessage('اسم المستخدم مطلوب')
+    .isLength({ min: 3 }).withMessage('اسم المستخدم يجب أن يكون 3 أحرف على الأقل')
+    .matches(/^[a-zA-Z0-9_]+$/).withMessage('اسم المستخدم يحتوي فقط على حروف إنجليزية وأرقام وشرطة سفلية'),
+  body('password').isLength({ min: 6 }).withMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
 ], async (req, res) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, message: errors.array()[0].msg });
 
   const { name, phone, email, username, password, contact_method='whatsapp', delivery_method='home', delivery_address, delivery_area } = req.body;
   try {
     const existPhone = await db.query('SELECT id FROM users WHERE phone=$1', [phone]);
     if (existPhone.rows.length) return res.status(409).json({ success: false, message: 'رقم الهاتف مستخدم مسبقاً' });
-    if (email) {
-      const existEmail = await db.query('SELECT id FROM users WHERE email=$1', [email]);
-      if (existEmail.rows.length) return res.status(409).json({ success: false, message: 'البريد الإلكتروني مستخدم مسبقاً' });
-    }
-    if (username) {
-      const existUser = await db.query('SELECT id FROM users WHERE username=$1', [username]);
-      if (existUser.rows.length) return res.status(409).json({ success: false, message: 'اسم المستخدم مستخدم مسبقاً' });
-    }
+
+    const existEmail = await db.query('SELECT id FROM users WHERE email=$1', [email.trim()]);
+    if (existEmail.rows.length) return res.status(409).json({ success: false, message: 'البريد الإلكتروني مستخدم مسبقاً' });
+
+    const existUser = await db.query('SELECT id FROM users WHERE username=$1', [username.trim()]);
+    if (existUser.rows.length) return res.status(409).json({ success: false, message: 'اسم المستخدم مستخدم مسبقاً' });
 
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await db.query(
@@ -135,7 +136,8 @@ router.get('/me', authenticate, async (req, res) => {
 
 // ─── PUT /auth/profile ────────────────────────────────────────────────────
 router.put('/profile', authenticate, async (req, res) => {
-  const allowed = ['name','contact_method','delivery_method','delivery_address','delivery_area'];
+  const allowed = ['name','contact_method','delivery_method','delivery_address','delivery_area',
+    'delivery_country','delivery_block','delivery_street','delivery_avenue','delivery_house','delivery_apartment'];
   const fields = {}; allowed.forEach(f => { if (req.body[f] !== undefined) fields[f] = req.body[f]; });
   if (!Object.keys(fields).length) return res.status(400).json({ success: false, message: 'لا بيانات للتحديث' });
 
@@ -143,7 +145,12 @@ router.put('/profile', authenticate, async (req, res) => {
   const vals = [...Object.values(fields), req.user.id];
   await db.query(`UPDATE users SET ${sets} WHERE id=$${vals.length}`, vals);
 
-  const { rows } = await db.query('SELECT id,name,phone,email,contact_method,delivery_method,delivery_address,delivery_area FROM users WHERE id=$1', [req.user.id]);
+  const { rows } = await db.query(
+    `SELECT id,name,phone,email,username,role,contact_method,delivery_method,
+            delivery_address,delivery_area,delivery_country,delivery_block,
+            delivery_street,delivery_avenue,delivery_house,delivery_apartment,
+            total_purchases,total_wins,total_auctions,rating,is_verified
+     FROM users WHERE id=$1`, [req.user.id]);
   res.json({ success: true, data: rows[0] });
 });
 

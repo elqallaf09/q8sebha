@@ -2,25 +2,64 @@
 class User {
   final int id;
   String name, phone;
-  String? email, role, contactMethod, deliveryMethod, deliveryAddress, deliveryArea;
+  String? email, username, role;
+  String? contactMethod, deliveryMethod;
+  // حقول العنوان التفصيلية
+  String? deliveryCountry, deliveryArea, deliveryBlock, deliveryStreet,
+          deliveryAvenue, deliveryHouse, deliveryApartment, deliveryAddress;
+  // إحصائيات
+  int? totalPurchases, totalWins, totalAuctions, isVerified;
+  double? rating;
   bool isBanned;
 
-  User({required this.id, required this.name, required this.phone,
-        this.email, this.role = 'user', this.isBanned = false,
-        this.contactMethod, this.deliveryMethod, this.deliveryAddress, this.deliveryArea});
+  User({
+    required this.id, required this.name, required this.phone,
+    this.email, this.username, this.role = 'user', this.isBanned = false,
+    this.contactMethod, this.deliveryMethod,
+    this.deliveryCountry, this.deliveryArea, this.deliveryBlock,
+    this.deliveryStreet, this.deliveryAvenue, this.deliveryHouse,
+    this.deliveryApartment, this.deliveryAddress,
+    this.totalPurchases, this.totalWins, this.totalAuctions,
+    this.isVerified, this.rating,
+  });
 
   factory User.fromJson(Map<String,dynamic> j) => User(
     id: j['id'], name: j['name'], phone: j['phone'],
-    email: j['email'], role: j['role'] ?? 'user',
+    email: j['email'], username: j['username'],
+    role: j['role'] ?? 'user',
     isBanned: j['is_banned'] == 1 || j['is_banned'] == true,
-    contactMethod:  j['contact_method'],
-    deliveryMethod: j['delivery_method'],
-    deliveryAddress: j['delivery_address'],
-    deliveryArea:   j['delivery_area'],
+    contactMethod:     j['contact_method'],
+    deliveryMethod:    j['delivery_method'],
+    deliveryCountry:   j['delivery_country'],
+    deliveryArea:      j['delivery_area'],
+    deliveryBlock:     j['delivery_block'],
+    deliveryStreet:    j['delivery_street'],
+    deliveryAvenue:    j['delivery_avenue'],
+    deliveryHouse:     j['delivery_house'],
+    deliveryApartment: j['delivery_apartment'],
+    deliveryAddress:   j['delivery_address'],
+    totalPurchases: j['total_purchases'] is int ? j['total_purchases'] : 0,
+    totalWins:      j['total_wins']      is int ? j['total_wins']      : 0,
+    totalAuctions:  j['total_auctions']  is int ? j['total_auctions']  : 0,
+    isVerified: j['is_verified'] is int ? j['is_verified'] : 0,
+    rating: j['rating'] != null ? (j['rating'] as num).toDouble() : 5.0,
   );
 
   bool get isAdmin  => role == 'admin';
   bool get isSeller => role == 'seller' || role == 'admin';
+
+  /// عنوان كامل مُجمَّع
+  String get fullAddress {
+    final parts = <String>[];
+    if (deliveryCountry != null && deliveryCountry!.isNotEmpty) parts.add(deliveryCountry!);
+    if (deliveryArea    != null && deliveryArea!.isNotEmpty)    parts.add('م. ${deliveryArea!}');
+    if (deliveryBlock   != null && deliveryBlock!.isNotEmpty)   parts.add('ق ${deliveryBlock!}');
+    if (deliveryStreet  != null && deliveryStreet!.isNotEmpty)  parts.add('ش ${deliveryStreet!}');
+    if (deliveryAvenue  != null && deliveryAvenue!.isNotEmpty)  parts.add('ج ${deliveryAvenue!}');
+    if (deliveryHouse   != null && deliveryHouse!.isNotEmpty)   parts.add('م ${deliveryHouse!}');
+    if (deliveryApartment != null && deliveryApartment!.isNotEmpty) parts.add('ش ${deliveryApartment!}');
+    return parts.isEmpty ? '—' : parts.join(' | ');
+  }
 }
 
 // ─── Product ──────────────────────────────────────────────────────────────
