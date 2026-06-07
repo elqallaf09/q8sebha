@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'providers/auth_provider.dart';
 import 'providers/auction_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/notification_provider.dart';
 import 'screens/splash_screen.dart';
+import 'services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // تهيئة Firebase
+  try {
+    await Firebase.initializeApp();
+    await FCMService.instance.init();
+  } catch (e) {
+    debugPrint('[Firebase] init failed: $e');
+  }
+
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,

@@ -27,9 +27,12 @@ class AppConfig {
     return '$ws/ws';
   }
 
-  /// يحوّل filename إلى رابط صورة كامل
+  /// يحوّل filename أو Cloudinary URL إلى رابط صورة كامل
   static String imageUrl(String filename) {
+    if (filename.isEmpty) return '';
+    // Cloudinary أو أي رابط كامل
     if (filename.startsWith('http')) return filename;
+    // ملف قديم محلي (للتوافق مع البيانات القديمة)
     return '$uploadsUrl/$filename';
   }
 }

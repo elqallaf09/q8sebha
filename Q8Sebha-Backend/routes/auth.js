@@ -172,6 +172,15 @@ router.get('/me', authenticate, async (req, res) => {
   res.json({ success: true, data: rows[0] });
 });
 
+// ─── PATCH /auth/device-token ─────────────────────────────────────────────
+// يحفظ FCM token للجهاز الحالي
+router.patch('/device-token', authenticate, async (req, res) => {
+  const { device_token } = req.body;
+  if (!device_token) return res.status(400).json({ success: false, message: 'device_token مطلوب' });
+  await db.query('UPDATE users SET device_token=$1 WHERE id=$2', [device_token, req.user.id]);
+  res.json({ success: true });
+});
+
 // ─── PUT /auth/profile ────────────────────────────────────────────────────
 router.put('/profile', authenticate, async (req, res) => {
   const allowed = ['name','contact_method','delivery_method','delivery_address','delivery_area',

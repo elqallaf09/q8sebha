@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { body, validationResult } = require('express-validator');
 const db = require('../db/db');
 const { authenticate } = require('../middleware/auth');
+const { sendToToken } = require('../utils/fcm');
 
 // ─── GET /auctions ────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
@@ -101,20 +102,12 @@ router.post('/', authenticate, [
       if (u.device_token) deviceTokens.push(u.device_token);
     }
 
-    // إرسال FCM push notification
-    if (deviceTokens.length > 0 && global.fcmAdmin) {
-      try {
-        await global.fcmAdmin.messaging().sendEachForMulticast({
-          tokens: deviceTokens,
-          notification: { title: notifTitle, body: notifBody },
-          data: { auction_id: String(rows[0].id), type: 'new_auction' },
-          android: { priority: 'high' },
-          apns: { payload: { aps: { sound: 'default', badge: 1 } } },
-        });
-      } catch (fcmErr) {
-        console.warn('[FCM]', fcmErr.message);
-      }
-    }
+    // إرسال FCM push notification للجميع
+    const { sendToTokens } = require('../utils/fcm');
+    setImmediate(() =>
+      sendToTokens(deviceTokens, notifTitle, notifBody,
+        { type: 'new_auction', auction_id: String(rows[0].id) })
+    );
 
     // WebSocket broadcast
     const wsMsg = JSON.stringify({ type: 'new_auction', auction: rows[0] });
@@ -167,6 +160,34 @@ router.post('/:id/bid', authenticate, async (req, res) => {
     // WebSocket
     const msg = JSON.stringify({ type:'new_bid', auctionId, amount: +amount, bidderName: req.user.name });
     if (global.wsClients) Object.values(global.wsClients).forEach(ws => { try { ws.send(msg); } catch(_){} });
+
+    // ─── FCM: أشعر البائع والمزايد السابق ────────────────────────────
+    setImmediate(async () => {
+      try {
+        // جلب token البائع
+        const sellerRow = await db.query('SELECT device_token FROM users WHERE id=$1', [auction.seller_id]);
+        const sellerToken = sellerRow.rows[0]?.device_token;
+        if (sellerToken && auction.seller_id !== req.user.id) {
+          await sendToToken(sellerToken,
+            '🎉 مزايدة جديدة!',
+            `مزايدة بـ ${(+amount).toFixed(3)} د.ك على "${auction.title}"`,
+            { type: 'new_bid', auction_id: String(auctionId) }
+          );
+        }
+        // أشعر المزايد السابق إذا كان موجوداً وهو مختلف
+        if (auction.current_bidder_id && auction.current_bidder_id !== req.user.id) {
+          const prevRow = await db.query('SELECT device_token FROM users WHERE id=$1', [auction.current_bidder_id]);
+          const prevToken = prevRow.rows[0]?.device_token;
+          if (prevToken) {
+            await sendToToken(prevToken,
+              '⚠️ تجاوزوا مزايدتك!',
+              `تم تجاوز مزايدتك على "${auction.title}" — زايد الآن!`,
+              { type: 'outbid', auction_id: String(auctionId) }
+            );
+          }
+        }
+      } catch (_) {}
+    });
 
     res.json({ success: true, data: { bid: { ...bid, bidder_name: req.user.name }, auction: updatedAuction } });
   } catch (err) {

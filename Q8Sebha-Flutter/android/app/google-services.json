@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "110409534573",
+    "project_id": "q8sebha-bc3d0",
+    "storage_bucket": "q8sebha-bc3d0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:110409534573:android:81db3313ebef3804890364",
+        "android_client_info": {
+          "package_name": "com.example.q8sebha"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAL0FdI77haxD59ngcoP1xklw0HQVucwDY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
