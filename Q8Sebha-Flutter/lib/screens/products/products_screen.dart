@@ -151,12 +151,6 @@ class _ProductsScreenState extends State<ProductsScreen>
                       ]),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  // العنوان الفرعي
-                  const Text('اكتشف أجمل المسابيح والأحجار الكريمة',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(fontFamily: 'Tajawal', fontSize: 14,
-                        color: Colors.white60, letterSpacing: 0.2)),
                 ],
               ),
             ),

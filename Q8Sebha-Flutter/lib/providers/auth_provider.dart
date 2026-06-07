@@ -62,6 +62,8 @@ class AuthProvider extends ChangeNotifier {
 
   void continueAsGuest() { appState = AppState.guest; notifyListeners(); }
 
+  void clearError() { errorMessage = null; notifyListeners(); }
+
   Future<void> logout() async {
     await _api.logout();
     _ws.disconnect();
