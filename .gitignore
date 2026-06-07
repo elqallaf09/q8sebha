@@ -1,0 +1,20 @@
+# Firebase — لا ترفع هذه الملفات على GitHub
+Q8Sebha-Flutter/android/app/google-services.json
+Q8Sebha-Flutter/ios/Runner/GoogleService-Info.plist
+
+# Backend secrets
+Q8Sebha-Backend/.env
+
+# Flutter
+Q8Sebha-Flutter/.dart_tool/
+Q8Sebha-Flutter/build/
+Q8Sebha-Flutter/.flutter-plugins
+Q8Sebha-Flutter/.flutter-plugins-dependencies
+Q8Sebha-Flutter/pubspec.lock
+
+# Node
+Q8Sebha-Backend/node_modules/
+
+# iOS
+Q8Sebha-Flutter/ios/Pods/
+Q8Sebha-Flutter/ios/.symlinks/
