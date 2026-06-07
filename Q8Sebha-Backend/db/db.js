@@ -149,15 +149,25 @@ const init = async () => {
   }
   console.log('✅ الجداول جاهزة');
 
-  // فحص إذا يوجد أدمن
-  const { rows } = await pool.query("SELECT id FROM users WHERE role='admin' LIMIT 1");
-  if (rows.length > 0) { console.log('✅ قاعدة البيانات جاهزة'); return; }
+  // فحص إذا يوجد أدمن — وتحديث بياناته دائماً
+  const adminPhone    = '+96541145763';
+  const adminPassword = 'Admin@Q8Sebha2026';
+  const hash = await bcrypt.hash(adminPassword, 10);
 
-  const hash = await bcrypt.hash('Admin@Q8Sebha2026', 10);
+  const { rows } = await pool.query("SELECT id FROM users WHERE role='admin' LIMIT 1");
+  if (rows.length > 0) {
+    await pool.query(
+      "UPDATE users SET password_hash=$1, phone=$2 WHERE role='admin'",
+      [hash, adminPhone]
+    );
+    console.log('✅ تم تحديث بيانات الأدمن');
+    return;
+  }
+
   await pool.query(
     `INSERT INTO users (name,phone,email,password_hash,role,is_verified,contact_method,delivery_method)
      VALUES ($1,$2,$3,$4,'admin',1,'whatsapp','pickup')`,
-    ['Q8Sebha Admin', '+96541145763', 'admin@q8sebha.com', hash]
+    ['Q8Sebha Admin', adminPhone, 'admin@q8sebha.com', hash]
   );
 
   const cats = [

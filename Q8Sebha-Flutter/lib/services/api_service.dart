@@ -61,7 +61,8 @@ class APIService {
       default:       res = await http.get(uri,    headers:headers);
     }
 
-    if (res.statusCode == 401 && retry) {
+    // فقط للطلبات المصادق عليها — لوجن/ريجستر لا تحتاج refresh
+    if (res.statusCode == 401 && retry && auth) {
       final ok = await _refreshToken();
       if (ok) return request(method, path, body:body, auth:auth, retry:false);
       throw APIError('انتهت جلستك، سجّل دخولك مجدداً');
