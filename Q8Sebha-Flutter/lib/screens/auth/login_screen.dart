@@ -118,15 +118,21 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _phone    = TextEditingController();
-  final _password = TextEditingController();
-  final _name     = TextEditingController();
-  final _email    = TextEditingController();
-  bool _showPass  = false;
-  bool _isSignup  = false;
+  final _phone      = TextEditingController();
+  final _identifier = TextEditingController(); // هاتف/إيميل/username في وضع تسجيل الدخول
+  final _password   = TextEditingController();
+  final _name       = TextEditingController();
+  final _email      = TextEditingController();
+  final _username   = TextEditingController();
+  bool _showPass    = false;
+  bool _isSignup    = false;
+  bool _phoneMode   = true; // وضع الدخول: هاتف أم إيميل/username
   CountryCode _country = _countries[0]; // الكويت افتراضي
 
   String get _fullPhone => '${_country.code}${_phone.text.replaceAll(RegExp(r'^0+'), '')}';
+
+  /// المعرّف النهائي المُرسل للسيرفر
+  String get _loginIdentifier => _phoneMode ? _fullPhone : _identifier.text.trim();
 
   @override
   Widget build(BuildContext context) {
@@ -203,61 +209,111 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
 
+                  // ─── حقول التسجيل ────────────────────────────────────
                   if (_isSignup) ...[
-                    Q8Field(hint: 'الاسم الكامل', controller: _name, icon: Icons.person),
+                    Q8Field(hint: 'الاسم الكامل *', controller: _name, icon: Icons.person),
+                    const SizedBox(height: 12),
+                    Q8Field(hint: 'اسم المستخدم (اختياري)', controller: _username, icon: Icons.alternate_email),
                     const SizedBox(height: 12),
                     Q8Field(hint: 'البريد الإلكتروني (اختياري)', controller: _email,
                         icon: Icons.email, keyboard: TextInputType.emailAddress),
                     const SizedBox(height: 12),
                   ],
 
-                  // ─── حقل الهاتف مع رمز الدولة ───────────────────────
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F0EB),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(children: [
-                      // زر اختيار الدولة
-                      GestureDetector(
-                        onTap: () => _showCountryPicker(context),
+                  // ─── toggle: هاتف / إيميل|username (في وضع الدخول) ──
+                  if (!_isSignup) ...[
+                    Row(children: [
+                      Expanded(child: GestureDetector(
+                        onTap: () => setState(() => _phoneMode = false),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.08),
-                            borderRadius: const BorderRadius.horizontal(right: Radius.circular(14)),
+                            color: !_phoneMode ? AppTheme.primary.withOpacity(0.1) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: !_phoneMode ? AppTheme.primary : Colors.grey.shade300),
                           ),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Text(_country.flag, style: const TextStyle(fontSize: 20)),
-                            const SizedBox(width: 4),
-                            Text(_country.code,
-                                style: const TextStyle(fontFamily: 'Tajawal',
-                                    fontWeight: FontWeight.w700, fontSize: 13,
-                                    color: AppTheme.primary)),
-                            const SizedBox(width: 2),
-                            const Icon(Icons.arrow_drop_down, color: AppTheme.primary, size: 18),
-                          ]),
+                          child: Text('إيميل / اسم المستخدم', textAlign: TextAlign.center,
+                            style: TextStyle(fontFamily: 'Tajawal', fontSize: 12,
+                              fontWeight: _phoneMode ? FontWeight.normal : FontWeight.w700,
+                              color: !_phoneMode ? AppTheme.primary : Colors.grey)),
                         ),
-                      ),
-                      // حقل الرقم
-                      Expanded(
-                        child: TextField(
-                          controller: _phone,
-                          keyboardType: TextInputType.phone,
-                          textAlign: TextAlign.left,
-                          textDirection: TextDirection.ltr,
-                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14),
-                          decoration: const InputDecoration(
-                            hintText: 'XXXXXXXX',
-                            hintStyle: TextStyle(color: Colors.grey),
-                            filled: false,
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      )),
+                      const SizedBox(width: 8),
+                      Expanded(child: GestureDetector(
+                        onTap: () => setState(() => _phoneMode = true),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _phoneMode ? AppTheme.primary.withOpacity(0.1) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _phoneMode ? AppTheme.primary : Colors.grey.shade300),
                           ),
+                          child: Text('رقم الهاتف', textAlign: TextAlign.center,
+                            style: TextStyle(fontFamily: 'Tajawal', fontSize: 12,
+                              fontWeight: _phoneMode ? FontWeight.w700 : FontWeight.normal,
+                              color: _phoneMode ? AppTheme.primary : Colors.grey)),
                         ),
-                      ),
+                      )),
                     ]),
-                  ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // ─── حقل الهاتف مع رمز الدولة (للهاتف) ─────────────
+                  if (_isSignup || _phoneMode)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F0EB),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(children: [
+                        GestureDetector(
+                          onTap: () => _showCountryPicker(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withOpacity(0.08),
+                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(14)),
+                            ),
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              Text(_country.flag, style: const TextStyle(fontSize: 20)),
+                              const SizedBox(width: 4),
+                              Text(_country.code,
+                                  style: const TextStyle(fontFamily: 'Tajawal',
+                                      fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.primary)),
+                              const SizedBox(width: 2),
+                              const Icon(Icons.arrow_drop_down, color: AppTheme.primary, size: 18),
+                            ]),
+                          ),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _phone,
+                            keyboardType: TextInputType.phone,
+                            textAlign: TextAlign.left,
+                            textDirection: TextDirection.ltr,
+                            style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14),
+                            decoration: const InputDecoration(
+                              hintText: 'XXXXXXXX',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              filled: false, border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            ),
+                          ),
+                        ),
+                      ]),
+                    ),
+
+                  // ─── حقل الإيميل / اسم المستخدم (في وضع الدخول فقط) ─
+                  if (!_isSignup && !_phoneMode)
+                    Q8Field(
+                      hint: 'البريد الإلكتروني أو اسم المستخدم',
+                      controller: _identifier,
+                      icon: Icons.alternate_email,
+                      keyboard: TextInputType.emailAddress,
+                    ),
+
                   const SizedBox(height: 12),
 
                   Q8Field(hint: 'كلمة المرور', controller: _password,
@@ -278,9 +334,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     onTap: () {
                       if (_isSignup) {
                         auth.register(_name.text, _fullPhone, _password.text,
-                            email: _email.text);
+                            email: _email.text.isEmpty ? null : _email.text,
+                            username: _username.text.isEmpty ? null : _username.text);
                       } else {
-                        auth.login(_fullPhone, _password.text);
+                        auth.login(_loginIdentifier, _password.text);
                       }
                     },
                   ),

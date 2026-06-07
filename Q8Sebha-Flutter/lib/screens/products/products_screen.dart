@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../../main.dart';
 import '../../config/app_config.dart';
 import '../../widgets/common_widgets.dart';
+import '../../utils/responsive.dart';
 import 'product_detail_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
@@ -211,11 +212,11 @@ class _ProductsScreenState extends State<ProductsScreen>
                   ),
                   childCount: vm.products.length,
                 ),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: R.cols(context),
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.72,
+                  childAspectRatio: R.cardRatio(context),
                 ),
               ),
             ),

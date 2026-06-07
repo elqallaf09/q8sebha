@@ -21,6 +21,7 @@ const init = async () => {
       name             TEXT NOT NULL,
       phone            TEXT NOT NULL UNIQUE,
       email            TEXT UNIQUE,
+      username         TEXT UNIQUE,
       password_hash    TEXT NOT NULL,
       role             TEXT NOT NULL DEFAULT 'user',
       avatar_url       TEXT,
@@ -146,6 +147,17 @@ const init = async () => {
 
   for (const sql of statements) {
     await pool.query(sql);
+  }
+
+  // ─── Migrations — تضاف تلقائياً إذا لم تكن موجودة ──────────────────────
+  const migrations = [
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE`,
+    `ALTER TABLE auctions ADD COLUMN IF NOT EXISTS reserve_price NUMERIC`,
+    `ALTER TABLE auctions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS device_token TEXT`,
+  ];
+  for (const m of migrations) {
+    try { await pool.query(m); } catch (_) { /* already exists */ }
   }
   console.log('✅ الجداول جاهزة');
 

@@ -8,9 +8,25 @@ router.get('/', async (req, res) => {
   const { status='active', page=1, limit=20 } = req.query;
   const offset = (page-1)*limit;
   try {
-    // إنهاء المزادات المنتهية
-    await db.query(`UPDATE auctions SET status='ended', winner_id=current_bidder_id, final_price=current_price
-                    WHERE status='active' AND ends_at<=NOW() AND current_bidder_id IS NOT NULL`);
+    // إنهاء المزادات المنتهية — مع منطق reserve_price
+    // إذا المزايد موجود لكن السعر أقل من reserve_price → reserve_not_met
+    await db.query(`
+      UPDATE auctions SET
+        status = CASE
+          WHEN reserve_price IS NOT NULL AND current_price < reserve_price THEN 'reserve_not_met'
+          WHEN current_bidder_id IS NOT NULL THEN 'ended'
+          ELSE 'no_bids'
+        END,
+        winner_id = CASE
+          WHEN reserve_price IS NOT NULL AND current_price < reserve_price THEN NULL
+          ELSE current_bidder_id
+        END,
+        final_price = CASE
+          WHEN reserve_price IS NOT NULL AND current_price < reserve_price THEN NULL
+          ELSE current_price
+        END
+      WHERE status='active' AND ends_at<=NOW()
+    `);
 
     const { rows } = await db.query(`
       SELECT a.*, u.name AS seller_name, u.phone AS seller_phone, u.contact_method AS seller_contact,
@@ -53,24 +69,57 @@ router.post('/', authenticate, [
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
   const { title, description, image_urls=[], emoji='📿', starting_price, max_price,
-          bid_increment=1.0, seller_terms, duration_minutes, listing_fee=2.0 } = req.body;
+          reserve_price, bid_increment=1.0, seller_terms, duration_minutes, listing_fee=2.0 } = req.body;
   const endsAt = new Date(Date.now() + duration_minutes*60*1000);
 
   try {
     const { rows } = await db.query(`
       INSERT INTO auctions (seller_id,title,description,image_urls,emoji,starting_price,max_price,
-        bid_increment,current_price,seller_terms,duration_minutes,ends_at,listing_fee)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+        reserve_price,bid_increment,current_price,seller_terms,duration_minutes,ends_at,listing_fee)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
       [req.user.id, title, description||null, JSON.stringify(image_urls), emoji,
-       starting_price, max_price||null, bid_increment, starting_price,
+       starting_price, max_price||null, reserve_price||null, bid_increment, starting_price,
        seller_terms||null, duration_minutes, endsAt, listing_fee]);
 
-    // إشعار الأدمن
-    const admins = (await db.query("SELECT id FROM users WHERE role='admin'")).rows;
-    for (const admin of admins) {
-      await db.query(`INSERT INTO notifications (user_id,type,title,body,icon,data) VALUES ($1,'system',$2,$3,'🔨',$4)`,
-        [admin.id, 'مزاد جديد نُشر', `${req.user.name} نشر مزاداً: ${title}`, JSON.stringify({ auction_id: rows[0].id })]);
+    // ─── إشعار لجميع المستخدمين ──────────────────────────────────────────
+    const durText = duration_minutes < 60
+      ? `${duration_minutes} دقيقة`
+      : duration_minutes < 1440
+        ? `${Math.floor(duration_minutes/60)} ساعة`
+        : `${Math.floor(duration_minutes/1440)} يوم`;
+    const notifTitle = '🔨 مزاد جديد!';
+    const notifBody  = `${title} — ابتداءً من ${starting_price} د.ك — المدة: ${durText}`;
+
+    const allUsers = (await db.query("SELECT id, device_token FROM users WHERE id != $1", [req.user.id])).rows;
+    const deviceTokens = [];
+
+    for (const u of allUsers) {
+      await db.query(
+        `INSERT INTO notifications (user_id,type,title,body,icon,data) VALUES ($1,'auction',$2,$3,'🔨',$4)`,
+        [u.id, notifTitle, notifBody, JSON.stringify({ auction_id: rows[0].id })]
+      );
+      if (u.device_token) deviceTokens.push(u.device_token);
     }
+
+    // إرسال FCM push notification
+    if (deviceTokens.length > 0 && global.fcmAdmin) {
+      try {
+        await global.fcmAdmin.messaging().sendEachForMulticast({
+          tokens: deviceTokens,
+          notification: { title: notifTitle, body: notifBody },
+          data: { auction_id: String(rows[0].id), type: 'new_auction' },
+          android: { priority: 'high' },
+          apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+        });
+      } catch (fcmErr) {
+        console.warn('[FCM]', fcmErr.message);
+      }
+    }
+
+    // WebSocket broadcast
+    const wsMsg = JSON.stringify({ type: 'new_auction', auction: rows[0] });
+    if (global.wsClients) Object.values(global.wsClients).forEach(ws => { try { ws.send(wsMsg); } catch(_){} });
+
     res.status(201).json({ success: true, data: rows[0] });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });

@@ -23,16 +23,24 @@ router.post('/register', [
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
-  const { name, phone, email, password, contact_method='whatsapp', delivery_method='home', delivery_address, delivery_area } = req.body;
+  const { name, phone, email, username, password, contact_method='whatsapp', delivery_method='home', delivery_address, delivery_area } = req.body;
   try {
-    const existing = await db.query('SELECT id FROM users WHERE phone=$1', [phone]);
-    if (existing.rows.length) return res.status(409).json({ success: false, message: 'رقم الهاتف مستخدم مسبقاً' });
+    const existPhone = await db.query('SELECT id FROM users WHERE phone=$1', [phone]);
+    if (existPhone.rows.length) return res.status(409).json({ success: false, message: 'رقم الهاتف مستخدم مسبقاً' });
+    if (email) {
+      const existEmail = await db.query('SELECT id FROM users WHERE email=$1', [email]);
+      if (existEmail.rows.length) return res.status(409).json({ success: false, message: 'البريد الإلكتروني مستخدم مسبقاً' });
+    }
+    if (username) {
+      const existUser = await db.query('SELECT id FROM users WHERE username=$1', [username]);
+      if (existUser.rows.length) return res.status(409).json({ success: false, message: 'اسم المستخدم مستخدم مسبقاً' });
+    }
 
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await db.query(
-      `INSERT INTO users (name,phone,email,password_hash,contact_method,delivery_method,delivery_address,delivery_area)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-      [name, phone, email||null, hash, contact_method, delivery_method, delivery_address||null, delivery_area||null]
+      `INSERT INTO users (name,phone,email,username,password_hash,contact_method,delivery_method,delivery_address,delivery_area)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+      [name, phone, email||null, username||null, hash, contact_method, delivery_method, delivery_address||null, delivery_area||null]
     );
     const userId = rows[0].id;
     const { access, refresh } = generateTokens(userId);
@@ -52,22 +60,27 @@ router.post('/register', [
 });
 
 // ─── POST /auth/login ─────────────────────────────────────────────────────
+// يقبل: phone أو email أو username في حقل واحد "identifier"
 router.post('/login', [
-  body('phone').trim().notEmpty(),
+  body('identifier').trim().notEmpty().withMessage('أدخل رقم الهاتف أو البريد أو اسم المستخدم'),
   body('password').notEmpty(),
 ], async (req, res) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, message: errors.array()[0].msg });
 
-  const { phone, password, device_token } = req.body;
+  const { identifier, password, device_token } = req.body;
   try {
-    const { rows } = await db.query('SELECT * FROM users WHERE phone=$1', [phone]);
+    // البحث بالهاتف أو الإيميل أو اسم المستخدم
+    const { rows } = await db.query(
+      'SELECT * FROM users WHERE phone=$1 OR email=$1 OR username=$1',
+      [identifier.trim()]
+    );
     const user = rows[0];
-    if (!user) return res.status(401).json({ success: false, message: 'رقم الهاتف أو كلمة المرور خاطئة' });
+    if (!user) return res.status(401).json({ success: false, message: 'البيانات غير صحيحة، تحقق وحاول مرة أخرى' });
     if (user.is_banned) return res.status(403).json({ success: false, message: 'تم حظر حسابك: ' + (user.ban_reason || 'مخالفة الشروط') });
 
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ success: false, message: 'رقم الهاتف أو كلمة المرور خاطئة' });
+    if (!valid) return res.status(401).json({ success: false, message: 'كلمة المرور غير صحيحة' });
 
     if (device_token) await db.query('UPDATE users SET device_token=$1 WHERE id=$2', [device_token, user.id]);
 

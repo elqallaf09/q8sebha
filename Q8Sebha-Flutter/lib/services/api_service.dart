@@ -87,12 +87,15 @@ class APIService {
   }
 
   // ─── Auth ──────────────────────────────────────────────────────────────
-  Future<Map<String,dynamic>> login(String phone, String password) =>
-      request('POST', '/auth/login', body:{'phone':phone,'password':password}, auth:false);
+  /// identifier = هاتف أو إيميل أو اسم مستخدم
+  Future<Map<String,dynamic>> login(String identifier, String password) =>
+      request('POST', '/auth/login', body:{'identifier':identifier,'password':password}, auth:false);
 
-  Future<Map<String,dynamic>> register(String name, String phone, String password, {String? email}) {
+  Future<Map<String,dynamic>> register(String name, String phone, String password,
+      {String? email, String? username}) {
     final body = <String,dynamic>{'name':name,'phone':phone,'password':password};
-    if (email != null && email.isNotEmpty) body['email'] = email;
+    if (email    != null && email.isNotEmpty)    body['email']    = email;
+    if (username != null && username.isNotEmpty) body['username'] = username;
     return request('POST', '/auth/register', body:body, auth:false);
   }
 

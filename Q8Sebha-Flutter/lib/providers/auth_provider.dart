@@ -29,10 +29,11 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String phone, String password) async {
+  /// تسجيل الدخول بأي معرّف: هاتف، إيميل، أو اسم مستخدم
+  Future<void> login(String identifier, String password) async {
     isLoading = true; errorMessage = null; notifyListeners();
     try {
-      final r = await _api.login(phone, password);
+      final r = await _api.login(identifier, password);
       final d = r['data'];
       await TokenStore.save(d['access_token'], d['refresh_token']);
       currentUser = User.fromJson(d['user']);
@@ -43,10 +44,12 @@ class AuthProvider extends ChangeNotifier {
     isLoading = false; notifyListeners();
   }
 
-  Future<void> register(String name, String phone, String password, {String? email}) async {
+  Future<void> register(String name, String phone, String password,
+      {String? email, String? username}) async {
     isLoading = true; errorMessage = null; notifyListeners();
     try {
-      final r = await _api.register(name, phone, password, email:email);
+      final r = await _api.register(name, phone, password,
+          email: email, username: username);
       final d = r['data'];
       await TokenStore.save(d['access_token'], d['refresh_token']);
       currentUser = User.fromJson(d['user']);

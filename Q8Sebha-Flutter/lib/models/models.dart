@@ -78,6 +78,7 @@ class Auction {
   String title, status;
   String? description, sellerTerms, sellerName, sellerPhone, winnerName;
   double startingPrice, maxPrice, bidIncrement, currentPrice;
+  double? reservePrice;
   int bidsCount, durationMinutes;
   int? winnerId, currentBidderId;
   double? finalPrice;
@@ -87,7 +88,7 @@ class Auction {
   Auction({required this.id, required this.sellerId, required this.title,
            required this.startingPrice, required this.maxPrice,
            required this.currentPrice, this.bidIncrement = 1.0,
-           this.bidsCount = 0, required this.durationMinutes,
+           this.reservePrice, this.bidsCount = 0, required this.durationMinutes,
            required this.status, this.description, this.sellerTerms,
            this.sellerName, this.sellerPhone, this.winnerName,
            this.winnerId, this.currentBidderId, this.finalPrice,
@@ -110,6 +111,7 @@ class Auction {
       maxPrice:      (j['max_price'] as num).toDouble(),
       currentPrice:  (j['current_price'] as num).toDouble(),
       bidIncrement:  (j['bid_increment'] as num?)?.toDouble() ?? 1.0,
+      reservePrice:  j['reserve_price'] != null ? (j['reserve_price'] as num).toDouble() : null,
       bidsCount:     j['bids_count'] ?? 0,
       durationMinutes: j['duration_minutes'] ?? 60,
       winnerId:       j['winner_id'],
@@ -119,12 +121,26 @@ class Auction {
     );
   }
 
-  bool get isActive      => status == 'active' && timeRemaining.inSeconds > 0;
+  bool get isActive       => status == 'active' && timeRemaining.inSeconds > 0;
+  bool get isReserveNotMet => status == 'reserve_not_met';
+  bool get isNoBids       => status == 'no_bids';
   Duration get timeRemaining => endsAt != null ? endsAt!.difference(DateTime.now()) : Duration.zero;
   double get progressFraction => ((currentPrice - startingPrice) / (maxPrice - startingPrice)).clamp(0.0, 1.0);
   String get currentPriceFormatted => '${currentPrice.toStringAsFixed(3)} د.ك';
   String get maxPriceFormatted     => '${maxPrice.toStringAsFixed(3)} د.ك';
   String get primaryImage          => imageUrls.isNotEmpty ? imageUrls.first : '';
+
+  /// نص الحالة النهائية
+  String get statusLabel {
+    switch (status) {
+      case 'active':           return '🟢 نشط';
+      case 'ended':            return '✅ انتهى';
+      case 'reserve_not_met':  return '↩️ عالمرجوع';
+      case 'no_bids':          return '😶 لا مزايدات';
+      default:                 return '🔴 انتهى';
+    }
+  }
+
   String get countdownString {
     final d = timeRemaining;
     if (d.inSeconds <= 0) return 'انتهى';

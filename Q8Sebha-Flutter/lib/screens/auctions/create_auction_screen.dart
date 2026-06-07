@@ -15,6 +15,7 @@ class _CreateAuctionScreenState extends State<CreateAuctionScreen> {
   final _desc    = TextEditingController();
   final _start   = TextEditingController();
   final _max     = TextEditingController();
+  final _reserve = TextEditingController();
   final _terms   = TextEditingController();
   double _durMin = 60;
   bool _loading  = false;
@@ -86,6 +87,29 @@ class _CreateAuctionScreenState extends State<CreateAuctionScreen> {
           Q8Field(hint:'السعر الابتدائي (د.ك)', controller:_start, icon:Icons.tag, keyboard:TextInputType.number),
           const SizedBox(height:12),
           Q8Field(hint:'الحد الأعلى — أقصاه 4000 د.ك', controller:_max, icon:Icons.arrow_upward, keyboard:TextInputType.number),
+          const SizedBox(height:12),
+          // ─── الحد المالي الأدنى (reserve price) ──────────────────────────
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E8),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.gold.withOpacity(0.4)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              const Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                Text('الحد المالي الأدنى (اختياري)', style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textDark)),
+                SizedBox(width: 6),
+                Icon(Icons.shield_outlined, color: AppTheme.gold, size: 18),
+              ]),
+              const SizedBox(height: 4),
+              const Text('إذا انتهى المزاد بأقل من هذا المبلغ → يُعتبر "عالمرجوع"',
+                style: TextStyle(fontFamily: 'Tajawal', fontSize: 12, color: AppTheme.textMid),
+                textAlign: TextAlign.right),
+              const SizedBox(height: 10),
+              Q8Field(hint: 'الحد الأدنى المقبول (د.ك)', controller: _reserve, icon: Icons.price_check, keyboard: TextInputType.number),
+            ]),
+          ),
           const SizedBox(height:16),
 
           // ─── مدة المزاد ───────────────────────────────────────
@@ -166,9 +190,11 @@ class _CreateAuctionScreenState extends State<CreateAuctionScreen> {
         imageUrls = await APIService.instance.uploadImages(_pickedFiles);
       }
 
+      final rp = double.tryParse(_reserve.text);
       await APIService.instance.createAuction({
         'title':_title.text, 'description':_desc.text,
         'starting_price':sp, 'max_price':mp,
+        if (rp != null && rp > 0) 'reserve_price': rp,
         'duration_minutes':_durMin.toInt(),
         'seller_terms':_terms.text, 'bid_increment':1.0,
         'image_urls':imageUrls,

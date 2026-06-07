@@ -115,15 +115,19 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                         fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
                   ]),
                 )),
-              // badge نشط/انتهى
+              // badge الحالة
               Positioned(top: 60, left: 16,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: (a.isActive ? Colors.green : Colors.red).withOpacity(0.85),
+                    color: a.isActive
+                        ? Colors.green.withOpacity(0.85)
+                        : a.isReserveNotMet
+                            ? Colors.orange.withOpacity(0.9)
+                            : Colors.red.withOpacity(0.85),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(a.isActive ? '🟢 نشط' : '🔴 انتهى',
+                  child: Text(a.statusLabel,
                     style: const TextStyle(fontFamily: 'Tajawal',
                       fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white)),
                 )),
@@ -176,6 +180,48 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                     ErrorBanner(vm.errorMessage!),
                   ],
                   const SizedBox(height: 16),
+
+                  // ─── reserve price info ─────────────────────────────
+                  if (a.reservePrice != null) Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8E8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.gold.withOpacity(0.4)),
+                    ),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text('${a.reservePrice!.toStringAsFixed(3)} د.ك',
+                        style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
+                          fontSize: 14, color: AppTheme.gold)),
+                      const Row(children: [
+                        Text('الحد الأدنى المقبول', style: TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.textMid)),
+                        SizedBox(width: 6),
+                        Icon(Icons.shield_outlined, color: AppTheme.gold, size: 16),
+                      ]),
+                    ]),
+                  ),
+
+                  // ─── عالمرجوع ───────────────────────────────────────
+                  if (a.isReserveNotMet) Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [Colors.orange.shade50, Colors.amber.shade50]),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Column(children: [
+                      const Text('↩️', style: TextStyle(fontSize: 40)),
+                      const SizedBox(height: 8),
+                      const Text('عالمرجوع',
+                        style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800,
+                          fontSize: 22, color: Colors.orange)),
+                      const SizedBox(height: 4),
+                      Text('المزاد انتهى لكن السعر لم يصل للحد المقبول (${a.reservePrice?.toStringAsFixed(3)} د.ك)',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.textMid)),
+                    ]),
+                  ),
 
                   // ─── زر المزايدة ────────────────────────────────────
                   if (a.isActive)
