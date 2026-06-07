@@ -8,6 +8,7 @@ const { WebSocketServer } = require('ws');
 const http        = require('http');
 const path        = require('path');
 
+const db     = require('./db/db');
 const app    = express();
 const server = http.createServer(app);
 
@@ -44,7 +45,14 @@ app.use('/api/products',      require('./routes/products'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin',         require('./routes/admin'));
 
-app.get('/health', (_, res) => res.json({ status: 'ok', service: 'Q8Sebha API' }));
+app.get('/health', async (_, res) => {
+  try {
+    const { rows } = await db.query("SELECT COUNT(*) as cnt FROM users");
+    res.json({ status: 'ok', service: 'Q8Sebha API', users: rows[0].cnt });
+  } catch (err) {
+    res.json({ status: 'ok', service: 'Q8Sebha API', db_error: err.message });
+  }
+});
 app.use((_, res) => res.status(404).json({ success: false, message: 'المسار غير موجود' }));
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err.message);
@@ -52,7 +60,6 @@ app.use((err, req, res, next) => {
 });
 
 // ─── Cron: إنهاء المزادات كل دقيقة ──────────────────────────────────────
-const db = require('./db/db');
 setInterval(async () => {
   try {
     await db.query(`UPDATE auctions SET status='ended', winner_id=current_bidder_id, final_price=current_price

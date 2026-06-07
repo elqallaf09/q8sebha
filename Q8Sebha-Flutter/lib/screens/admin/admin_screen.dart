@@ -435,9 +435,9 @@ class _UsersTabState extends State<_UsersTab> {
             padding:const EdgeInsets.fromLTRB(12,4,12,80),
             itemCount:_users.length,
             itemBuilder:(_, i) {
-              final u = _users[i];
+              final u = _users[i] as Map<String,dynamic>;
               final isBanned = u['is_banned']==true || u['is_banned']==1;
-              final role = u['role']??'user';
+              final role = (u['role'] as String?) ?? 'user';
               return Container(
                 margin:const EdgeInsets.only(bottom:8),
                 decoration:BoxDecoration(
@@ -450,7 +450,7 @@ class _UsersTabState extends State<_UsersTab> {
                   contentPadding:const EdgeInsets.fromLTRB(8,4,14,4),
                   leading:CircleAvatar(
                     backgroundColor:role=='admin'?AppTheme.gold.withOpacity(0.15):AppTheme.primary.withOpacity(0.1),
-                    child:Text((u['name'] as String???'؟')[0].toUpperCase(),
+                    child:Text(((u['name'] as String?) ?? '؟')[0].toUpperCase(),
                       style:TextStyle(fontFamily:'Tajawal', fontWeight:FontWeight.w700,
                           color:role=='admin'?AppTheme.gold:AppTheme.primary))),
                   title:Text(u['name']??'', textAlign:TextAlign.right, style:AppText.heading3.copyWith(fontSize:14)),
@@ -489,7 +489,7 @@ class _UsersTabState extends State<_UsersTab> {
                   ),
                 ),
               );
-            })),
+            }))),
   ]);
 }
 
