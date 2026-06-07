@@ -46,20 +46,20 @@ class Q8SebhaApp extends StatelessWidget {
 
 // ─── ثيم التطبيق ──────────────────────────────────────────────────────────
 class AppTheme {
-  // الألوان الأساسية
-  static const primary     = Color(0xFF1B6B3A);   // أخضر عميق
-  static const primaryLight= Color(0xFF2E8B57);
-  static const gold        = Color(0xFFB8860B);   // ذهبي داكن أنيق
-  static const goldLight   = Color(0xFFD4AF37);
-  static const bg          = Color(0xFFF5F5F0);   // كريمي فاتح
-  static const card        = Colors.white;
-  static const textDark    = Color(0xFF1A1A2E);
-  static const textMid     = Color(0xFF555566);
-  static const textLight   = Color(0xFF999AAA);
+  // الألوان الأساسية — تصميم فاخر عصري
+  static const primary      = Color(0xFF1A1A2E);   // كحلي داكن فاخر
+  static const primaryLight = Color(0xFF2D2D44);
+  static const gold         = Color(0xFFC9A84C);   // ذهبي دافئ
+  static const goldLight    = Color(0xFFE8C96A);   // ذهبي فاتح
+  static const bg           = Color(0xFFF7F6F3);   // أبيض مائل للكريمي
+  static const card         = Colors.white;
+  static const textDark     = Color(0xFF1A1A2E);
+  static const textMid      = Color(0xFF5A5A72);
+  static const textLight    = Color(0xFFAAABBB);
 
   // تدرج رئيسي
   static const gradient = LinearGradient(
-    colors: [primary, Color(0xFF0D4F2A)],
+    colors: [Color(0xFF1A1A2E), Color(0xFF2D2D55)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

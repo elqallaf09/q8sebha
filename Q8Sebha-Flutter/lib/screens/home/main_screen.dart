@@ -27,50 +27,109 @@ class _MainScreenState extends State<MainScreen> {
     final unread = context.watch<NotificationProvider>().unreadCount;
     return Scaffold(
       body: IndexedStack(index: _tab, children: _screens),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 12, offset: Offset(0, -2))],
+      bottomNavigationBar: _BottomNav(
+        selected: _tab,
+        unread: unread,
+        onTap: (i) {
+          setState(() => _tab = i);
+          if (i == 2) context.read<NotificationProvider>().fetchAll();
+        },
+      ),
+    );
+  }
+}
+
+// ─── شريط التنقل الفاخر ──────────────────────────────────────────────────────
+class _BottomNav extends StatelessWidget {
+  final int selected;
+  final int unread;
+  final ValueChanged<int> onTap;
+  const _BottomNav({required this.selected, required this.unread, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, -4)),
+        ],
+        border: Border(top: BorderSide(color: Colors.grey.shade100, width: 1)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(icon: Icons.shopping_bag_outlined, activeIcon: Icons.shopping_bag_rounded,
+                  label: 'المنتجات', index: 0, selected: selected, onTap: onTap),
+              _NavItem(icon: Icons.gavel_outlined, activeIcon: Icons.gavel_rounded,
+                  label: 'المزادات', index: 1, selected: selected, onTap: onTap),
+              _NavItem(icon: Icons.notifications_outlined, activeIcon: Icons.notifications_rounded,
+                  label: 'الإشعارات', index: 2, selected: selected, onTap: onTap, badge: unread),
+              _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded,
+                  label: 'حسابي', index: 3, selected: selected, onTap: onTap),
+            ],
+          ),
         ),
-        child: NavigationBar(
-          selectedIndex: _tab,
-          onDestinationSelected: (i) {
-            setState(() => _tab = i);
-            if (i == 2) context.read<NotificationProvider>().fetchAll();
-          },
-          height: 66,
-          destinations: [
-            const NavigationDestination(
-              icon: Icon(Icons.shopping_bag_outlined),
-              selectedIcon: Icon(Icons.shopping_bag),
-              label: 'المنتجات',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.gavel_outlined),
-              selectedIcon: Icon(Icons.gavel),
-              label: 'المزادات',
-            ),
-            NavigationDestination(
-              icon: Badge(
-                isLabelVisible: unread > 0,
-                label: Text('${unread > 99 ? 99 : unread}',
-                    style: const TextStyle(fontFamily: 'Tajawal', fontSize: 10)),
-                child: const Icon(Icons.notifications_outlined),
-              ),
-              selectedIcon: Badge(
-                isLabelVisible: unread > 0,
-                label: Text('${unread > 99 ? 99 : unread}',
-                    style: const TextStyle(fontFamily: 'Tajawal', fontSize: 10)),
-                child: const Icon(Icons.notifications),
-              ),
-              label: 'الإشعارات',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'حسابي',
-            ),
-          ],
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon, activeIcon;
+  final String label;
+  final int index, selected;
+  final ValueChanged<int> onTap;
+  final int badge;
+  const _NavItem({
+    required this.icon, required this.activeIcon, required this.label,
+    required this.index, required this.selected, required this.onTap, this.badge = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = index == selected;
+    return GestureDetector(
+      onTap: () => onTap(index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.primary.withOpacity(0.08) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
         ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Stack(clipBehavior: Clip.none, children: [
+            Icon(isActive ? activeIcon : icon,
+              color: isActive ? AppTheme.primary : AppTheme.textLight,
+              size: 24),
+            if (badge > 0) Positioned(
+              top: -4, left: -4,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                child: Text('${badge > 9 ? '9+' : badge}',
+                  style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 4),
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 200),
+            style: TextStyle(
+              fontFamily: 'Tajawal',
+              fontSize: 10,
+              fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
+              color: isActive ? AppTheme.primary : AppTheme.textLight,
+            ),
+            child: Text(label),
+          ),
+        ]),
       ),
     );
   }

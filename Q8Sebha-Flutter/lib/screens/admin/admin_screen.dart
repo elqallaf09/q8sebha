@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../main.dart';
@@ -266,21 +267,24 @@ class _AddProductScreenState extends State<_AddProductScreen> {
     if (_name.text.isEmpty || _price.text.isEmpty) {
       setState(() => _error = 'أدخل الاسم والسعر'); return;
     }
+    if (_categoryId == null) {
+      setState(() => _error = 'اختر التصنيف أولاً'); return;
+    }
     setState(() { _loading=true; _error=null; });
     try {
       List<String> urls = [];
       if (_images.isNotEmpty) urls = await APIService.instance.uploadImages(_images);
       await APIService.instance.adminAddProduct({
         'name': _name.text,
-        'price': double.tryParse(_price.text)??0,
+        'price': double.tryParse(_price.text) ?? 0,
         'description': _desc.text,
         'emoji': _emoji,
-        'stock': int.tryParse(_stock.text)??1,
-        if (_categoryId!=null) 'category_id': int.tryParse(_categoryId!),
+        'stock': int.tryParse(_stock.text) ?? 1,
+        'category_id': int.parse(_categoryId!),
         'image_urls': urls,
       });
       if (mounted) Navigator.pop(context, true);
-    } catch(e) { setState(() { _error=e.toString(); _loading=false; }); }
+    } catch(e) { setState(() { _error = e.toString(); _loading = false; }); }
   }
 
   @override
@@ -352,8 +356,7 @@ class _AddProductScreenState extends State<_AddProductScreen> {
             itemBuilder:(_, i)=>Stack(children:[
               Container(width:80, height:80, margin:const EdgeInsets.only(left:8),
                 child:ClipRRect(borderRadius:BorderRadius.circular(10),
-                  child:Image.network(_images[i].path, fit:BoxFit.cover,
-                    errorBuilder:(_,__,___)=>const Icon(Icons.image, size:40)))),
+                  child:Image.file(File(_images[i].path), fit:BoxFit.cover))),
               Positioned(top:2, right:2,
                 child:GestureDetector(
                   onTap:()=>setState(()=>_images.removeAt(i)),

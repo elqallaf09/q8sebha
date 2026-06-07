@@ -5,34 +5,137 @@ import '../main.dart';
 import 'auth/login_screen.dart';
 import 'home/main_screen.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+  @override State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _fade;
+  late Animation<double> _scale;
+  late Animation<double> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+    _fade  = CurvedAnimation(parent: _ctrl, curve: const Interval(0.0, 0.6, curve: Curves.easeOut));
+    _scale = Tween<double>(begin: 0.7, end: 1.0).animate(
+        CurvedAnimation(parent: _ctrl, curve: const Interval(0.0, 0.7, curve: Curves.elasticOut)));
+    _slide = Tween<double>(begin: 30, end: 0).animate(
+        CurvedAnimation(parent: _ctrl, curve: const Interval(0.3, 0.8, curve: Curves.easeOut)));
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (_, auth, __) {
-        // التوجيه بعد انتهاء Splash
         if (auth.appState == AppState.auth)  return const LoginScreen();
         if (auth.appState == AppState.main)  return const MainScreen();
         if (auth.appState == AppState.guest) return const MainScreen();
 
-        // Splash
         return Scaffold(
-          backgroundColor: AppTheme.primary,
-          body: Center(
-            child: Column(mainAxisAlignment:MainAxisAlignment.center, children:[
-              const Text('📿', style:TextStyle(fontSize:100)),
-              const SizedBox(height:16),
-              const Text('Q8Sebha',
-                style:TextStyle(fontFamily:'Tajawal', fontWeight:FontWeight.w700,
-                                fontSize:40, color:Colors.white)),
-              const SizedBox(height:8),
-              Text('مسابيح وأحجار كريمة',
-                style:TextStyle(fontFamily:'Tajawal', fontSize:18, color:Colors.white.withOpacity(0.85))),
-              const SizedBox(height:40),
-              const CircularProgressIndicator(color:Colors.white, strokeWidth:2.5),
-            ]),
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0F0F1E), Color(0xFF1A1A2E), Color(0xFF252540)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: SafeArea(
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _ctrl,
+                  builder: (_, __) => Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // الأيقونة
+                      FadeTransition(
+                        opacity: _fade,
+                        child: ScaleTransition(
+                          scale: _scale,
+                          child: Container(
+                            width: 120, height: 120,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(32),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF2D2D50), Color(0xFF1A1A35)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.gold.withOpacity(0.3),
+                                  blurRadius: 30, spreadRadius: 2,
+                                ),
+                              ],
+                              border: Border.all(
+                                color: AppTheme.gold.withOpacity(0.4), width: 1.5,
+                              ),
+                            ),
+                            child: const Center(
+                              child: Text('📿', style: TextStyle(fontSize: 60)),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // الاسم
+                      FadeTransition(
+                        opacity: _fade,
+                        child: Transform.translate(
+                          offset: Offset(0, _slide.value),
+                          child: Column(children: [
+                            ShaderMask(
+                              shaderCallback: (b) => const LinearGradient(
+                                colors: [AppTheme.goldLight, AppTheme.gold],
+                              ).createShader(b),
+                              child: const Text('Q8Sebha',
+                                style: TextStyle(
+                                  fontFamily: 'Tajawal',
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 42,
+                                  color: Colors.white,
+                                  letterSpacing: 1,
+                                )),
+                            ),
+                            const SizedBox(height: 6),
+                            Text('مسابيح وأحجار كريمة',
+                              style: TextStyle(
+                                fontFamily: 'Tajawal',
+                                fontSize: 16,
+                                color: Colors.white.withOpacity(0.6),
+                                letterSpacing: 0.5,
+                              )),
+                          ]),
+                        ),
+                      ),
+                      const SizedBox(height: 60),
+
+                      // مؤشر التحميل
+                      FadeTransition(
+                        opacity: _fade,
+                        child: SizedBox(
+                          width: 40, height: 40,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.gold.withOpacity(0.8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         );
       },

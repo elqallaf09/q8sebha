@@ -20,52 +20,139 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<NotificationProvider>();
+    final hasUnread = vm.notifications.any((n) => !n.isRead);
+
     return Scaffold(
-      appBar:AppBar(
-        title:const Text('الإشعارات 🔔'),
-        actions:[
-          if (vm.notifications.any((n)=>!n.isRead))
-            TextButton(
-              onPressed:()=>vm.markAllRead(),
-              child:const Text('قراءة الكل',style:TextStyle(color:Colors.white,fontFamily:'Tajawal',fontSize:13))),
-        ],
-      ),
-      body:vm.isLoading
-        ? const LoadingBody()
-        : vm.notifications.isEmpty
-          ? const EmptyState(emoji:'🔔', message:'لا توجد إشعارات')
-          : RefreshIndicator(
-              onRefresh:()=>vm.fetchAll(),
-              child:ListView.builder(
-                itemCount:vm.notifications.length,
-                itemBuilder:(_,i){
+      backgroundColor: AppTheme.bg,
+      body: CustomScrollView(slivers: [
+        // ─── AppBar ────────────────────────────────────────────────────
+        SliverAppBar(
+          pinned: true,
+          backgroundColor: AppTheme.primary,
+          title: const Text('الإشعارات',
+            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
+              fontSize: 18, color: Colors.white)),
+          centerTitle: true,
+          actions: [
+            if (hasUnread)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: TextButton(
+                  onPressed: () => vm.markAllRead(),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  ),
+                  child: const Text('قراءة الكل',
+                    style: TextStyle(fontFamily: 'Tajawal', color: Colors.white,
+                      fontWeight: FontWeight.w600, fontSize: 13)),
+                ),
+              ),
+          ],
+        ),
+
+        // ─── المحتوى ───────────────────────────────────────────────────
+        if (vm.isLoading)
+          const SliverFillRemaining(child: LoadingBody())
+        else if (vm.notifications.isEmpty)
+          const SliverFillRemaining(
+            child: EmptyState(emoji: '🔔', message: 'لا توجد إشعارات'))
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (_, i) {
                   final n = vm.notifications[i];
                   return Dismissible(
-                    key:Key('n${n.id}'),
-                    background:Container(color:AppTheme.primary,
-                      alignment:Alignment.centerRight,
-                      padding:const EdgeInsets.only(right:20),
-                      child:const Icon(Icons.done_all,color:Colors.white)),
-                    direction:DismissDirection.endToStart,
-                    onDismissed:(_)=>vm.markRead(n.id),
-                    child:ListTile(
-                      tileColor:n.isRead?null:AppTheme.primary.withOpacity(0.05),
-                      leading:Text(n.icon,style:const TextStyle(fontSize:26)),
-                      title:Text(n.title,
-                        style:TextStyle(fontFamily:'Tajawal',fontWeight:n.isRead?FontWeight.w500:FontWeight.w700,fontSize:14),
-                        textAlign:TextAlign.right),
-                      subtitle:Text(n.body,
-                        style:const TextStyle(fontFamily:'Tajawal',fontSize:12,color:Colors.grey),
-                        maxLines:2,textAlign:TextAlign.right),
-                      trailing:n.isRead?null:Container(
-                        width:10,height:10,
-                        decoration:const BoxDecoration(color:AppTheme.primary,shape:BoxShape.circle)),
-                      onTap:()=>vm.markRead(n.id),
+                    key: Key('n${n.id}'),
+                    background: Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      child: const Icon(Icons.done_all, color: Colors.white),
+                    ),
+                    direction: DismissDirection.endToStart,
+                    onDismissed: (_) => vm.markRead(n.id),
+                    child: GestureDetector(
+                      onTap: () => vm.markRead(n.id),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: n.isRead ? Colors.white : AppTheme.primary.withOpacity(0.04),
+                          borderRadius: BorderRadius.circular(16),
+                          border: n.isRead
+                              ? Border.all(color: Colors.grey.shade100)
+                              : Border.all(color: AppTheme.primary.withOpacity(0.15)),
+                          boxShadow: [BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 6, offset: const Offset(0, 2))],
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // dot
+                            if (!n.isRead)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6, right: 4),
+                                child: Container(
+                                  width: 8, height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: AppTheme.primary, shape: BoxShape.circle)),
+                              )
+                            else
+                              const SizedBox(width: 12),
+                            // المحتوى
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(n.title,
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontFamily: 'Tajawal',
+                                      fontWeight: n.isRead ? FontWeight.w500 : FontWeight.w700,
+                                      fontSize: 14, color: AppTheme.textDark)),
+                                  const SizedBox(height: 4),
+                                  Text(n.body,
+                                    textAlign: TextAlign.right,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.textMid)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // الأيقونة
+                            Container(
+                              width: 44, height: 44,
+                              decoration: BoxDecoration(
+                                color: n.isRead
+                                    ? const Color(0xFFF5F5F8)
+                                    : AppTheme.primary.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(child: Text(n.icon,
+                                style: const TextStyle(fontSize: 22))),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 },
+                childCount: vm.notifications.length,
               ),
             ),
+          ),
+      ]),
     );
   }
 }
