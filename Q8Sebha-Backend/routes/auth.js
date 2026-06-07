@@ -39,8 +39,12 @@ async function sendResetEmail(email, code) {
   });
 }
 
-const JWT_SECRET  = process.env.JWT_SECRET  || 'q8sebha_jwt_secret_2026';
-const JWT_REFRESH = process.env.JWT_REFRESH || 'q8sebha_refresh_2026';
+const JWT_SECRET  = process.env.JWT_SECRET;
+const JWT_REFRESH = process.env.JWT_REFRESH;
+if (!JWT_SECRET || !JWT_REFRESH) {
+  console.error('❌ FATAL: JWT_SECRET و JWT_REFRESH مطلوبان في .env');
+  process.exit(1);
+}
 
 const generateTokens = (userId) => ({
   access:  jwt.sign({ id: userId }, JWT_SECRET,  { expiresIn: '15m' }),

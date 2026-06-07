@@ -1,25 +1,28 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/models.dart';
 import '../config/app_config.dart';
 
-// ─── مفاتيح التخزين ───────────────────────────────────────────────────────
+// ─── مفاتيح التخزين الآمن (Keychain/Keystore) ────────────────────────────
 class TokenStore {
-  static const _access  = 'q8s_access';
-  static const _refresh = 'q8s_refresh';
+  static const _access  = 'q8s_access_token';
+  static const _refresh = 'q8s_refresh_token';
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
+  );
 
-  static Future<String?> getAccess()  async => (await SharedPreferences.getInstance()).getString(_access);
-  static Future<String?> getRefresh() async => (await SharedPreferences.getInstance()).getString(_refresh);
+  static Future<String?> getAccess()  async => _storage.read(key: _access);
+  static Future<String?> getRefresh() async => _storage.read(key: _refresh);
   static Future<void> save(String a, String r) async {
-    final p = await SharedPreferences.getInstance();
-    await p.setString(_access, a);
-    await p.setString(_refresh, r);
+    await _storage.write(key: _access,  value: a);
+    await _storage.write(key: _refresh, value: r);
   }
   static Future<void> clear() async {
-    final p = await SharedPreferences.getInstance();
-    await p.remove(_access); await p.remove(_refresh);
+    await _storage.delete(key: _access);
+    await _storage.delete(key: _refresh);
   }
 }
 

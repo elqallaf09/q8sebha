@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const db  = require('../db/db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'q8sebha_jwt_secret_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) { console.error('❌ JWT_SECRET مطلوب'); process.exit(1); }
 
 const authenticate = async (req, res, next) => {
   const header = req.headers.authorization;

@@ -43,16 +43,28 @@ try {
 }
 
 app.use(helmet());
-app.use(cors({ origin: '*', methods: ['GET','POST','PUT','PATCH','DELETE'] }));
-app.use(express.json({ limit: '10mb' }));
+// CORS — في Production يُقيَّد للتطبيق فقط؛ في Dev يُفتح
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['*'];
+app.use(cors({
+  origin: allowedOrigins.includes('*') ? '*' : (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) cb(null, true);
+    else cb(new Error('CORS: غير مسموح'));
+  },
+  methods: ['GET','POST','PUT','PATCH','DELETE'],
+}));
+app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-const limiter     = rateLimit({ windowMs: 15*60*1000, max: 200 });
-const authLimiter = rateLimit({ windowMs: 15*60*1000, max: 20 });
+const limiter     = rateLimit({ windowMs: 15*60*1000, max: 200, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15*60*1000, max: 10, standardHeaders: true, legacyHeaders: false }); // 10 محاولة فقط
+const resetLimiter = rateLimit({ windowMs: 60*60*1000, max: 5, standardHeaders: true, legacyHeaders: false });  // 5 طلبات/ساعة
 app.use('/api/', limiter);
-app.use('/api/auth/login',    authLimiter);
-app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/login',           authLimiter);
+app.use('/api/auth/register',        authLimiter);
+app.use('/api/auth/forgot-password', resetLimiter);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

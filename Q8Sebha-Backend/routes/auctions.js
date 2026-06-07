@@ -127,23 +127,40 @@ router.post('/', authenticate, [
 // ─── POST /auctions/:id/bid ───────────────────────────────────────────────
 router.post('/:id/bid', authenticate, async (req, res) => {
   const auctionId = +req.params.id;
-  const { amount } = req.body;
-  try {
-    const auction = (await db.query('SELECT * FROM auctions WHERE id=$1', [auctionId])).rows[0];
-    if (!auction) return res.status(404).json({ success: false, message: 'المزاد غير موجود' });
-    if (auction.status !== 'active') return res.status(400).json({ success: false, message: 'المزاد منتهٍ' });
-    if (new Date() > new Date(auction.ends_at)) return res.status(400).json({ success: false, message: 'انتهى وقت المزاد' });
-    if (+amount <= +auction.current_price) return res.status(400).json({ success: false, message: `المزايدة يجب أن تكون أكثر من ${auction.current_price}` });
-    if (auction.max_price && +amount > +auction.max_price) return res.status(400).json({ success: false, message: 'تجاوز الحد الأعلى' });
-    if (auction.seller_id === req.user.id) return res.status(400).json({ success: false, message: 'لا يمكنك المزايدة على مزادك' });
+  const amount    = +req.body.amount;
 
-    const bid = (await db.query(
+  // تحقق أساسي من المدخلات
+  if (!amount || isNaN(amount) || amount <= 0)
+    return res.status(400).json({ success: false, message: 'مبلغ المزايدة غير صالح' });
+
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    // قفل الصف للحماية من race conditions
+    const { rows } = await client.query(
+      'SELECT * FROM auctions WHERE id=$1 FOR UPDATE', [auctionId]);
+    const auction = rows[0];
+
+    if (!auction) { await client.query('ROLLBACK'); return res.status(404).json({ success: false, message: 'المزاد غير موجود' }); }
+    if (auction.status !== 'active') { await client.query('ROLLBACK'); return res.status(400).json({ success: false, message: 'المزاد منتهٍ' }); }
+    if (new Date() > new Date(auction.ends_at)) { await client.query('ROLLBACK'); return res.status(400).json({ success: false, message: 'انتهى وقت المزاد' }); }
+    if (auction.seller_id === req.user.id) { await client.query('ROLLBACK'); return res.status(400).json({ success: false, message: 'لا يمكنك المزايدة على مزادك' }); }
+
+    const minValid = +auction.current_price + +auction.bid_increment;
+    if (amount < minValid) { await client.query('ROLLBACK'); return res.status(400).json({ success: false, message: `الحد الأدنى للمزايدة ${minValid.toFixed(3)} د.ك` }); }
+    if (auction.max_price && amount > +auction.max_price) { await client.query('ROLLBACK'); return res.status(400).json({ success: false, message: 'تجاوز الحد الأعلى للمزاد' }); }
+
+    const bid = (await client.query(
       'INSERT INTO bids (auction_id,bidder_id,amount) VALUES ($1,$2,$3) RETURNING *',
       [auctionId, req.user.id, amount]
     )).rows[0];
 
-    await db.query('UPDATE auctions SET current_price=$1, current_bidder_id=$2, bids_count=bids_count+1 WHERE id=$3',
+    await client.query(
+      'UPDATE auctions SET current_price=$1, current_bidder_id=$2, bids_count=bids_count+1 WHERE id=$3',
       [amount, req.user.id, auctionId]);
+
+    await client.query('COMMIT');
 
     const updatedAuction = (await db.query('SELECT * FROM auctions WHERE id=$1', [auctionId])).rows[0];
 
@@ -152,7 +169,12 @@ router.post('/:id/bid', authenticate, async (req, res) => {
     if (global.wsClients) Object.values(global.wsClients).forEach(ws => { try { ws.send(msg); } catch(_){} });
 
     res.json({ success: true, data: { bid: { ...bid, bidder_name: req.user.name }, auction: updatedAuction } });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch(_) {}
+    res.status(500).json({ success: false, message: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 // ─── POST /auctions/:id/payment-link ─────────────────────────────────────
