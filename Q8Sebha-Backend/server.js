@@ -1,3 +1,4 @@
+require('dns').setDefaultResultOrder('ipv4first'); // Railway → Supabase IPv4 fix
 require('dotenv').config();
 const express     = require('express');
 const cors        = require('cors');
