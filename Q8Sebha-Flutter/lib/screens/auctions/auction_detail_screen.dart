@@ -1,11 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auction_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../main.dart';
 import '../../config/app_config.dart';
 import '../../widgets/common_widgets.dart';
+import '../../services/api_service.dart';
+import '../../models/models.dart';
 
 class AuctionDetailScreen extends StatefulWidget {
   final int auctionId;
@@ -15,18 +22,70 @@ class AuctionDetailScreen extends StatefulWidget {
 
 class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
   Timer? _ticker;
-  final _payLink = TextEditingController();
+  final _payLink   = TextEditingController();
+  final _bidAmtCtrl = TextEditingController();
+  bool _isFav      = false;
+  bool _favLoading = false;
+  bool _showAllBids = false;
+  Map<String,dynamic>? _autoBid;
+  List<Map<String,dynamic>> _allBids = [];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) =>
-        context.read<AuctionProvider>().fetchAuction(widget.auctionId));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuctionProvider>().fetchAuction(widget.auctionId);
+      _loadExtras();
+    });
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) { if (mounted) setState(() {}); });
   }
 
+  Future<void> _loadExtras() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.isLoggedIn) {
+      try {
+        final fav = await APIService.instance.checkFavoriteAuction(widget.auctionId);
+        final ab  = await APIService.instance.getAutoBid(widget.auctionId);
+        if (mounted) setState(() { _isFav = fav; _autoBid = ab; });
+      } catch (_) {}
+    }
+    try {
+      final bids = await APIService.instance.auctionBids(widget.auctionId);
+      if (mounted) setState(() => _allBids = bids);
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFav() async {
+    if (!context.read<AuthProvider>().isLoggedIn) return;
+    setState(() => _favLoading = true);
+    try {
+      final action = await APIService.instance.toggleFavoriteAuction(widget.auctionId);
+      setState(() => _isFav = action == 'added');
+    } catch (_) {}
+    setState(() => _favLoading = false);
+  }
+
+  void _openWhatsApp(String phone) async {
+    final clean = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    final uri = Uri.parse('https://wa.me/$clean');
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  void _shareAuction(Auction a) {
+    Share.share(
+      '🔨 مزاد: ${a.title}\n'
+      '💰 السعر الحالي: ${a.currentPriceFormatted}\n'
+      '⏰ ينتهي: ${a.countdownString}\n\n'
+      'تابع المزاد على Q8Sebha 📿',
+    );
+  }
+
+  void _openImageGallery(BuildContext ctx, List<String> urls, int initial) {
+    Navigator.push(ctx, MaterialPageRoute(builder: (_) => _ImageGallery(urls: urls, initial: initial)));
+  }
+
   @override
-  void dispose() { _ticker?.cancel(); _payLink.dispose(); super.dispose(); }
+  void dispose() { _ticker?.cancel(); _payLink.dispose(); _bidAmtCtrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +95,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
 
     if (vm.isLoading && a == null) return const Scaffold(body: LoadingBody());
     if (a == null) return const Scaffold(
-      body: Center(child: Text('خطأ في التحميل',
-        style: TextStyle(fontFamily: 'Tajawal'))));
+      body: Center(child: Text('خطأ في التحميل', style: TextStyle(fontFamily: 'Tajawal'))));
 
     final secs = a.timeRemaining.inSeconds;
     final isUrgent  = secs < 60;
@@ -54,49 +112,74 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
           onTap: () => Navigator.pop(context),
           child: Container(
             margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.4),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
             child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
           ),
         ),
+        actions: [
+          // زر المفضلة
+          GestureDetector(
+            onTap: _toggleFav,
+            child: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
+              padding: const EdgeInsets.all(8),
+              child: _favLoading
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Icon(_isFav ? Icons.favorite : Icons.favorite_border,
+                      color: _isFav ? Colors.red : Colors.white, size: 20),
+            ),
+          ),
+          // زر المشاركة
+          GestureDetector(
+            onTap: () => _shareAuction(a),
+            child: Container(
+              margin: const EdgeInsets.only(left: 8, top: 8, bottom: 8, right: 4),
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
+              padding: const EdgeInsets.all(8),
+              child: const Icon(Icons.share, color: Colors.white, size: 20),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(children: [
-          // ─── صورة المزاد ─────────────────────────────────────────────
+          // ─── صور المزاد (قابلة للنقر والزووم) ───────────────────────────
           SizedBox(
             height: 280,
             child: Stack(children: [
               a.imageUrls.isEmpty
-                  ? Container(
-                      color: const Color(0xFFF0EDE8),
+                  ? Container(color: const Color(0xFFF0EDE8),
                       child: const Center(child: Text('📿', style: TextStyle(fontSize: 100))))
-                  : Image.network(
-                      AppConfig.imageUrl(a.primaryImage),
-                      width: double.infinity, height: 280, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Center(
-                        child: Text('📿', style: TextStyle(fontSize: 100)))),
+                  : a.imageUrls.length == 1
+                      ? GestureDetector(
+                          onTap: () => _openImageGallery(context,
+                              a.imageUrls.map((u) => AppConfig.imageUrl(u)).toList(), 0),
+                          child: Image.network(AppConfig.imageUrl(a.primaryImage),
+                              width: double.infinity, height: 280, fit: BoxFit.cover,
+                              errorBuilder: (_,__,___) => const Center(child: Text('📿', style: TextStyle(fontSize: 100)))))
+                      : PageView.builder(
+                          itemCount: a.imageUrls.length,
+                          itemBuilder: (_, i) => GestureDetector(
+                            onTap: () => _openImageGallery(context,
+                                a.imageUrls.map((u) => AppConfig.imageUrl(u)).toList(), i),
+                            child: Image.network(AppConfig.imageUrl(a.imageUrls[i]),
+                                width: double.infinity, height: 280, fit: BoxFit.cover,
+                                errorBuilder: (_,__,___) => const Center(child: Text('📿', style: TextStyle(fontSize: 80)))),
+                          ),
+                        ),
               // تدرج
               Positioned(bottom: 0, left: 0, right: 0,
-                child: Container(
-                  height: 120,
+                child: Container(height: 120,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [Colors.black.withOpacity(0.7), Colors.transparent],
-                    ),
-                  ),
-                )),
+                    gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter,
+                      colors: [Colors.black.withOpacity(0.7), Colors.transparent])))),
               // السعر الحالي
               Positioned(bottom: 16, right: 16,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text('السعر الحالي',
-                    style: TextStyle(fontFamily: 'Tajawal', fontSize: 11, color: Colors.white70)),
+                  Text('السعر الحالي', style: TextStyle(fontFamily: 'Tajawal', fontSize: 11, color: Colors.white70)),
                   Text(a.currentPriceFormatted,
-                    style: const TextStyle(fontFamily: 'Tajawal',
-                      fontWeight: FontWeight.w800, fontSize: 26, color: Colors.white)),
+                    style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800, fontSize: 26, color: Colors.white)),
                 ])),
               // عداد الوقت
               Positioned(bottom: 20, left: 16,
@@ -105,14 +188,12 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                   decoration: BoxDecoration(
                     color: isUrgent ? Colors.red.withOpacity(0.9) : Colors.black.withOpacity(0.6),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white24),
-                  ),
+                    border: Border.all(color: Colors.white24)),
                   child: Row(children: [
                     Icon(Icons.timer, color: timerColor, size: 15),
                     const SizedBox(width: 5),
                     Text(a.countdownString,
-                      style: const TextStyle(fontFamily: 'Tajawal',
-                        fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
+                      style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
                   ]),
                 )),
               // badge الحالة
@@ -120,251 +201,215 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: a.isActive
-                        ? Colors.green.withOpacity(0.85)
-                        : a.isReserveNotMet
-                            ? Colors.orange.withOpacity(0.9)
-                            : Colors.red.withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                    color: a.isActive ? Colors.green.withOpacity(0.85)
+                        : a.isReserveNotMet ? Colors.orange.withOpacity(0.9) : Colors.red.withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(20)),
                   child: Text(a.statusLabel,
-                    style: const TextStyle(fontFamily: 'Tajawal',
-                      fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white)),
+                    style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white)),
                 )),
+              // مؤشر صور متعددة
+              if (a.imageUrls.length > 1)
+                Positioned(top: 60, right: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.photo_library, color: Colors.white, size: 13),
+                      const SizedBox(width: 3),
+                      Text('${a.imageUrls.length}', style: const TextStyle(color: Colors.white, fontSize: 12, fontFamily: 'Tajawal')),
+                    ]),
+                  )),
             ]),
           ),
 
-          // ─── بطاقة المعلومات ─────────────────────────────────────────
+          // ─── بطاقة المعلومات ─────────────────────────────────────────────
           Transform.translate(
             offset: const Offset(0, -20),
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   // عنوان
-                  Text(a.title,
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(fontFamily: 'Tajawal',
-                      fontWeight: FontWeight.w800, fontSize: 20, color: AppTheme.textDark)),
+                  Text(a.title, textAlign: TextAlign.right,
+                    style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800,
+                        fontSize: 20, color: AppTheme.textDark)),
                   const SizedBox(height: 16),
 
                   // شريط الأسعار
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('${a.bidsCount} مزايدة',
-                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.textMid)),
-                        Text('الحد الأعلى: ${a.maxPriceFormatted}',
-                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12, color: AppTheme.textLight)),
-                      ]),
-                      Text('الابتدائي: ${a.startingPrice.toStringAsFixed(3)} د.ك',
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('${a.bidsCount} مزايدة',
+                        style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.textMid)),
+                      Text('الحد الأعلى: ${a.maxPriceFormatted}',
                         style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12, color: AppTheme.textLight)),
-                    ],
-                  ),
+                    ]),
+                    Text('الابتدائي: ${a.startingPrice.toStringAsFixed(3)} د.ك',
+                      style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12, color: AppTheme.textLight)),
+                  ]),
                   const SizedBox(height: 8),
                   PriceRangeBar(fraction: a.progressFraction),
                   const SizedBox(height: 16),
 
-                  // بائع / شروط
-                  if (a.sellerName != null) _infoBox('👤 البائع', a.sellerName!),
-                  if (a.sellerTerms != null && a.sellerTerms!.isNotEmpty)
+                  // ─── بائع + واتساب ──────────────────────────────────────
+                  if (a.sellerName != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7F6F3),
+                        borderRadius: BorderRadius.circular(14)),
+                      child: Row(children: [
+                        // زر واتساب
+                        if (a.sellerPhone != null)
+                          GestureDetector(
+                            onTap: () => _openWhatsApp(a.sellerPhone!),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF25D366),
+                                borderRadius: BorderRadius.circular(10)),
+                              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                Text('💬', style: TextStyle(fontSize: 14)),
+                                SizedBox(width: 4),
+                                Text('واتساب', style: TextStyle(
+                                    fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
+                                    fontSize: 12, color: Colors.white)),
+                              ]),
+                            ),
+                          ),
+                        const Spacer(),
+                        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                          Text('👤 البائع', style: const TextStyle(fontFamily: 'Tajawal',
+                              fontSize: 11, color: AppTheme.textLight)),
+                          Text(a.sellerName!,
+                            style: const TextStyle(fontFamily: 'Tajawal',
+                                fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textDark)),
+                        ]),
+                      ]),
+                    ),
+
+                  if (a.sellerTerms != null && a.sellerTerms!.isNotEmpty) ...[
+                    const SizedBox(height: 10),
                     _infoBox('📋 شروط البائع', a.sellerTerms!),
+                  ],
 
                   if (vm.errorMessage != null) ...[
-                    const SizedBox(height: 8),
-                    ErrorBanner(vm.errorMessage!),
+                    const SizedBox(height: 8), ErrorBanner(vm.errorMessage!),
                   ],
+
+                  // ─── reserve price ───────────────────────────────────────
+                  if (a.reservePrice != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF8E8), borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.gold.withOpacity(0.4))),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                        Text('${a.reservePrice!.toStringAsFixed(3)} د.ك',
+                          style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
+                              fontSize: 14, color: AppTheme.gold)),
+                        const Row(children: [
+                          Text('الحد الأدنى المقبول', style: TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.textMid)),
+                          SizedBox(width: 6),
+                          Icon(Icons.shield_outlined, color: AppTheme.gold, size: 16),
+                        ]),
+                      ]),
+                    ),
+                  ],
+
+                  // ─── عالمرجوع ────────────────────────────────────────────
+                  if (a.isReserveNotMet) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [Colors.orange.shade50, Colors.amber.shade50]),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.orange.shade200)),
+                      child: Column(children: [
+                        const Text('↩️', style: TextStyle(fontSize: 40)),
+                        const SizedBox(height: 8),
+                        const Text('عالمرجوع',
+                          style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800,
+                              fontSize: 22, color: Colors.orange)),
+                        const SizedBox(height: 4),
+                        Text('المزاد انتهى لكن السعر لم يصل للحد المقبول (${a.reservePrice?.toStringAsFixed(3)} د.ك)',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.textMid)),
+                      ]),
+                    ),
+                  ],
+
                   const SizedBox(height: 16),
 
-                  // ─── reserve price info ─────────────────────────────
-                  if (a.reservePrice != null) Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF8E8),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.gold.withOpacity(0.4)),
-                    ),
-                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text('${a.reservePrice!.toStringAsFixed(3)} د.ك',
-                        style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
-                          fontSize: 14, color: AppTheme.gold)),
-                      const Row(children: [
-                        Text('الحد الأدنى المقبول', style: TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.textMid)),
-                        SizedBox(width: 6),
-                        Icon(Icons.shield_outlined, color: AppTheme.gold, size: 16),
-                      ]),
-                    ]),
-                  ),
-
-                  // ─── عالمرجوع ───────────────────────────────────────
-                  if (a.isReserveNotMet) Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [Colors.orange.shade50, Colors.amber.shade50]),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.orange.shade200),
-                    ),
-                    child: Column(children: [
-                      const Text('↩️', style: TextStyle(fontSize: 40)),
-                      const SizedBox(height: 8),
-                      const Text('عالمرجوع',
-                        style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800,
-                          fontSize: 22, color: Colors.orange)),
-                      const SizedBox(height: 4),
-                      Text('المزاد انتهى لكن السعر لم يصل للحد المقبول (${a.reservePrice?.toStringAsFixed(3)} د.ك)',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.textMid)),
-                    ]),
-                  ),
-
-                  // ─── زر المزايدة ────────────────────────────────────
-                  if (a.isActive)
+                  // ─── أزرار المزايدة ──────────────────────────────────────
+                  if (a.isActive) ...[
                     auth.isGuest
-                        ? Q8Button(
-                            label: 'سجّل الدخول للمزايدة',
-                            color: AppTheme.textMid,
+                        ? Q8Button(label: 'سجّل الدخول للمزايدة', color: AppTheme.textMid,
                             onTap: () => context.read<AuthProvider>().appState = AppState.auth)
-                        : Container(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppTheme.primary, Color(0xFF2D2D55)]),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [BoxShadow(
-                                color: AppTheme.primary.withOpacity(0.3),
-                                blurRadius: 12, offset: const Offset(0, 4))],
+                        : Column(children: [
+                            // زر المزايدة العادية
+                            _BidButton(
+                              label: 'زايد الآن +${a.bidIncrement.toStringAsFixed(3)} د.ك',
+                              isLoading: vm.isLoading,
+                              onTap: () => _confirmBid(context, vm, a),
                             ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: vm.isLoading ? null : () => _confirmBid(context, vm, a),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  alignment: Alignment.center,
-                                  child: vm.isLoading
-                                      ? const SizedBox(width: 24, height: 24,
-                                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                      : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                                          const Text('🔨', style: TextStyle(fontSize: 18)),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'زايد الآن +${a.bidIncrement.toStringAsFixed(3)} د.ك',
-                                            style: const TextStyle(fontFamily: 'Tajawal',
-                                              fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white)),
-                                        ]),
-                                ),
-                              ),
-                            ),
-                          ),
+                            const SizedBox(height: 10),
+                            // زر المزايدة التلقائية
+                            _autoBid != null
+                                ? _AutoBidActive(
+                                    maxAmount: (_autoBid!['max_amount'] as num).toDouble(),
+                                    onCancel: () async {
+                                      await APIService.instance.cancelAutoBid(widget.auctionId);
+                                      setState(() => _autoBid = null);
+                                    },
+                                  )
+                                : OutlinedButton.icon(
+                                    onPressed: () => _showAutoBidSheet(context, a),
+                                    style: OutlinedButton.styleFrom(
+                                      minimumSize: const Size(double.infinity, 48),
+                                      side: const BorderSide(color: AppTheme.primary),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                    ),
+                                    icon: const Icon(Icons.auto_mode, color: AppTheme.primary),
+                                    label: const Text('مزايدة تلقائية',
+                                      style: TextStyle(fontFamily: 'Tajawal', color: AppTheme.primary,
+                                          fontWeight: FontWeight.w700)),
+                                  ),
+                          ]),
+                  ],
 
-                  // ─── البائع: رابط دفع ───────────────────────────────
+                  // ─── البائع: رابط دفع ────────────────────────────────────
                   if (!a.isActive && a.sellerId == auth.currentUser?.id && a.winnerId != null) ...[
                     const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.amber.shade200),
-                      ),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                        Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                          const SizedBox(width: 6),
-                          Text('الفائز: ${a.winnerName ?? "#${a.winnerId}"}',
-                            style: const TextStyle(fontFamily: 'Tajawal',
-                              fontWeight: FontWeight.w700, fontSize: 15)),
-                          const Icon(Icons.emoji_events, color: AppTheme.gold, size: 20),
-                        ]),
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: TextField(
-                            controller: _payLink,
-                            textAlign: TextAlign.right,
-                            style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14),
-                            decoration: const InputDecoration(
-                              hintText: 'رابط الدفع (واتساب/كاشير...)',
-                              hintStyle: TextStyle(fontFamily: 'Tajawal', color: AppTheme.textLight),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.all(12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Q8Button(
-                          label: 'إرسال رابط الدفع للفائز',
-                          color: Colors.green,
-                          onTap: () async {
-                            final ok = await vm.sendPaymentLink(a.id, _payLink.text);
-                            if (ok && context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('✅ تم إرسال الرابط',
-                                  style: TextStyle(fontFamily: 'Tajawal'))));
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        Q8Button(
-                          label: 'إبلاغ عن عدم الدفع ⚠️',
-                          color: Colors.red,
-                          onTap: () => _confirmReport(context, vm, a.id),
-                        ),
-                      ]),
+                    _SellerPanel(
+                      auction: a, payLinkCtrl: _payLink, vm: vm,
+                      onReport: () => _confirmReport(context, vm, a.id),
                     ),
                   ],
 
-                  // ─── آخر المزايدات ──────────────────────────────────
-                  if (vm.bids.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                      const Text('آخر المزايدات',
-                        style: TextStyle(fontFamily: 'Tajawal',
-                          fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textDark)),
-                      const SizedBox(width: 6),
-                      Container(width: 3, height: 20,
-                        decoration: BoxDecoration(color: AppTheme.gold,
-                          borderRadius: BorderRadius.circular(2))),
-                    ]),
-                    const SizedBox(height: 10),
-                    ...List.generate(vm.bids.take(10).length, (i) {
-                      final bid = vm.bids[i];
-                      final isTop = i == 0;
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isTop ? AppTheme.primary.withOpacity(0.05) : const Color(0xFFF7F6F3),
-                          borderRadius: BorderRadius.circular(12),
-                          border: isTop ? Border.all(color: AppTheme.gold.withOpacity(0.3)) : null,
-                        ),
-                        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                          Row(children: [
-                            if (isTop) const Text('🥇 ', style: TextStyle(fontSize: 14)),
-                            Text(bid.amountFormatted,
-                              style: TextStyle(fontFamily: 'Tajawal',
-                                fontWeight: FontWeight.w700, fontSize: 14,
-                                color: isTop ? AppTheme.primary : AppTheme.textDark)),
-                          ]),
-                          Row(children: [
-                            Text(bid.bidderName ?? 'مجهول',
-                              style: const TextStyle(fontFamily: 'Tajawal',
-                                fontSize: 14, color: AppTheme.textMid)),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.person_outline, size: 16, color: AppTheme.textLight),
-                          ]),
-                        ]),
-                      );
-                    }),
+                  // ─── تقييم البائع (الفائز فقط بعد انتهاء المزاد) ────────
+                  if (!a.isActive && a.status == 'ended' &&
+                      auth.currentUser?.id == a.winnerId &&
+                      a.sellerId != auth.currentUser?.id) ...[
+                    const SizedBox(height: 16),
+                    _RatingSection(sellerId: a.sellerId, auctionId: a.id),
                   ],
+
+                  // ─── سجل المزايدات ──────────────────────────────────────
+                  const SizedBox(height: 20),
+                  _BidsSection(
+                    bids: _allBids.isEmpty ? vm.bids.map((b) => {
+                      'amount': b.amount, 'bidder_name': b.bidderName ?? 'مجهول',
+                    }).toList() : _allBids,
+                    showAll: _showAllBids,
+                    onToggle: () => setState(() => _showAllBids = !_showAllBids),
+                  ),
+
                   const SizedBox(height: 20),
                 ]),
               ),
@@ -379,29 +424,23 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
     width: double.infinity,
     margin: const EdgeInsets.only(bottom: 10),
     padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF7F6F3),
-      borderRadius: BorderRadius.circular(14),
-    ),
+    decoration: BoxDecoration(color: const Color(0xFFF7F6F3), borderRadius: BorderRadius.circular(14)),
     child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
       Text(title, style: const TextStyle(fontFamily: 'Tajawal',
-        fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textDark)),
+          fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textDark)),
       const SizedBox(height: 4),
       Text(content, textAlign: TextAlign.right,
         style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14, color: AppTheme.textMid)),
     ]),
   );
 
-  void _confirmBid(BuildContext ctx, AuctionProvider vm, auction) {
-    final nextAmount = (auction.currentPrice + auction.bidIncrement).toStringAsFixed(3);
+  void _confirmBid(BuildContext ctx, AuctionProvider vm, Auction a) {
+    final nextAmount = (a.currentPrice + a.bidIncrement).toStringAsFixed(3);
     showModalBottomSheet(
-      context: ctx,
-      backgroundColor: Colors.transparent,
+      context: ctx, backgroundColor: Colors.transparent,
       builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
+        decoration: const BoxDecoration(color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4,
@@ -416,31 +455,94 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [AppTheme.goldLight, AppTheme.gold]),
-              borderRadius: BorderRadius.circular(12),
-            ),
+              borderRadius: BorderRadius.circular(12)),
             child: Text('$nextAmount د.ك',
-              style: const TextStyle(fontFamily: 'Tajawal',
-                fontWeight: FontWeight.w800, fontSize: 24, color: Colors.white)),
+              style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800,
+                  fontSize: 24, color: Colors.white)),
           ),
           const SizedBox(height: 20),
-          Q8Button(
-            label: 'تأكيد المزايدة',
-            onTap: () async {
-              Navigator.pop(ctx);
-              await vm.placeBid(auction.id, auction.currentPrice + auction.bidIncrement);
-              if (vm.bidSuccess && ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                  content: Text('✅ تم تسجيل مزايدتك!',
-                    style: TextStyle(fontFamily: 'Tajawal')),
-                  backgroundColor: Colors.green));
-            },
-          ),
+          Q8Button(label: 'تأكيد المزايدة', onTap: () async {
+            Navigator.pop(ctx);
+            await vm.placeBid(a.id, a.currentPrice + a.bidIncrement);
+            if (vm.bidSuccess && ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(
+              const SnackBar(content: Text('✅ تم تسجيل مزايدتك!',
+                  style: TextStyle(fontFamily: 'Tajawal')), backgroundColor: Colors.green));
+            // تحديث سجل المزايدات
+            final bids = await APIService.instance.auctionBids(widget.auctionId);
+            if (mounted) setState(() => _allBids = bids);
+          }),
           const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
+          TextButton(onPressed: () => Navigator.pop(ctx),
             child: const Text('إلغاء', style: TextStyle(color: AppTheme.textLight))),
           const SizedBox(height: 8),
         ]),
+      ),
+    );
+  }
+
+  void _showAutoBidSheet(BuildContext ctx, Auction a) {
+    _bidAmtCtrl.clear();
+    showModalBottomSheet(
+      context: ctx, backgroundColor: Colors.transparent, isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            const Text('⚡ المزايدة التلقائية',
+              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 18)),
+            const SizedBox(height: 8),
+            Text('النظام سيزايد تلقائياً بالحد الأدنى حتى يصل لمبلغك الأعلى',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.textMid)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _bidAmtCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'Tajawal', fontSize: 20, fontWeight: FontWeight.w700),
+              decoration: InputDecoration(
+                hintText: 'الحد الأعلى (د.ك)',
+                hintStyle: const TextStyle(fontFamily: 'Tajawal', color: AppTheme.textLight),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppTheme.primary, width: 2)),
+                suffixText: 'د.ك',
+                suffixStyle: const TextStyle(fontFamily: 'Tajawal', color: AppTheme.textMid),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Q8Button(label: 'تفعيل المزايدة التلقائية ⚡', onTap: () async {
+              final amt = double.tryParse(_bidAmtCtrl.text);
+              if (amt == null || amt <= a.currentPrice) {
+                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                  content: Text('أدخل مبلغاً أكثر من ${a.currentPriceFormatted}',
+                    style: const TextStyle(fontFamily: 'Tajawal'))));
+                return;
+              }
+              Navigator.pop(ctx);
+              try {
+                await APIService.instance.setAutoBid(a.id, amt);
+                final ab = await APIService.instance.getAutoBid(a.id);
+                if (mounted) setState(() => _autoBid = ab);
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(content: Text('✅ تم تفعيل المزايدة التلقائية حتى ${amt.toStringAsFixed(3)} د.ك',
+                    style: const TextStyle(fontFamily: 'Tajawal')), backgroundColor: Colors.green));
+              } on APIError catch (e) {
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(content: Text(e.message, style: const TextStyle(fontFamily: 'Tajawal')),
+                    backgroundColor: Colors.red));
+              }
+            }),
+            const SizedBox(height: 8),
+          ]),
+        ),
       ),
     );
   }
@@ -452,8 +554,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
         title: const Text('إبلاغ عن عدم الدفع', textAlign: TextAlign.right,
           style: TextStyle(fontFamily: 'Tajawal', color: Colors.red, fontWeight: FontWeight.w700)),
         content: const Text('سيتم حظر المشتري من التطبيق. هل أنت متأكد؟',
-          textAlign: TextAlign.right,
-          style: TextStyle(fontFamily: 'Tajawal')),
+          textAlign: TextAlign.right, style: TextStyle(fontFamily: 'Tajawal')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
           ElevatedButton(
@@ -462,14 +563,303 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
               Navigator.pop(ctx);
               final ok = await vm.reportNonPayment(auctionId);
               if (ok && ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                  content: Text('تم الإبلاغ وحظر المشتري',
-                    style: TextStyle(fontFamily: 'Tajawal')),
-                  backgroundColor: Colors.red));
+                const SnackBar(content: Text('تم الإبلاغ وحظر المشتري',
+                    style: TextStyle(fontFamily: 'Tajawal')), backgroundColor: Colors.red));
             },
             child: const Text('إبلاغ وحظر')),
         ],
       ),
     );
+  }
+}
+
+// ─── معرض الصور مع زووم ──────────────────────────────────────────────────
+class _ImageGallery extends StatefulWidget {
+  final List<String> urls;
+  final int initial;
+  const _ImageGallery({required this.urls, required this.initial});
+  @override State<_ImageGallery> createState() => _ImageGalleryState();
+}
+class _ImageGalleryState extends State<_ImageGallery> {
+  late int _current;
+  @override void initState() { super.initState(); _current = widget.initial; }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context)),
+        title: Text('${_current + 1} / ${widget.urls.length}',
+          style: const TextStyle(fontFamily: 'Tajawal', color: Colors.white)),
+        centerTitle: true,
+      ),
+      body: PhotoViewGallery.builder(
+        itemCount: widget.urls.length,
+        pageController: PageController(initialPage: widget.initial),
+        onPageChanged: (i) => setState(() => _current = i),
+        builder: (_, i) => PhotoViewGalleryPageOptions(
+          imageProvider: NetworkImage(widget.urls[i]),
+          minScale: PhotoViewComputedScale.contained,
+          maxScale: PhotoViewComputedScale.covered * 3,
+        ),
+        scrollPhysics: const BouncingScrollPhysics(),
+        backgroundDecoration: const BoxDecoration(color: Colors.black),
+      ),
+    );
+  }
+}
+
+// ─── زر مزايدة ───────────────────────────────────────────────────────────
+class _BidButton extends StatelessWidget {
+  final String label;
+  final bool isLoading;
+  final VoidCallback onTap;
+  const _BidButton({required this.label, required this.isLoading, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(colors: [AppTheme.primary, Color(0xFF2D2D55)]),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 12, offset: const Offset(0,4))]),
+    child: Material(color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: isLoading ? null : onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          alignment: Alignment.center,
+          child: isLoading
+              ? const SizedBox(width: 24, height: 24,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Text('🔨', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                  Text(label, style: const TextStyle(fontFamily: 'Tajawal',
+                      fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white)),
+                ]),
+        ),
+      )),
+  );
+}
+
+// ─── مزايدة تلقائية نشطة ─────────────────────────────────────────────────
+class _AutoBidActive extends StatelessWidget {
+  final double maxAmount;
+  final VoidCallback onCancel;
+  const _AutoBidActive({required this.maxAmount, required this.onCancel});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    decoration: BoxDecoration(
+      color: const Color(0xFFE8F5E9),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Colors.green.shade300)),
+    child: Row(children: [
+      GestureDetector(
+        onTap: onCancel,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade200)),
+          child: const Text('إلغاء', style: TextStyle(fontFamily: 'Tajawal', color: Colors.red, fontSize: 13)),
+        ),
+      ),
+      const Spacer(),
+      Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        const Text('⚡ مزايدة تلقائية نشطة',
+          style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 13, color: Colors.green)),
+        Text('حتى ${maxAmount.toStringAsFixed(3)} د.ك',
+          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12, color: AppTheme.textMid)),
+      ]),
+    ]),
+  );
+}
+
+// ─── لوحة البائع ─────────────────────────────────────────────────────────
+class _SellerPanel extends StatelessWidget {
+  final Auction auction;
+  final TextEditingController payLinkCtrl;
+  final AuctionProvider vm;
+  final VoidCallback onReport;
+  const _SellerPanel({required this.auction, required this.payLinkCtrl,
+      required this.vm, required this.onReport});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.shade200)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+        const SizedBox(width: 6),
+        Text('الفائز: ${auction.winnerName ?? "#${auction.winnerId}"}',
+          style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 15)),
+        const Icon(Icons.emoji_events, color: AppTheme.gold, size: 20),
+      ]),
+      const SizedBox(height: 12),
+      Container(
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200)),
+        child: TextField(
+          controller: payLinkCtrl, textAlign: TextAlign.right,
+          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14),
+          decoration: const InputDecoration(
+            hintText: 'رابط الدفع (واتساب/كاشير...)',
+            hintStyle: TextStyle(fontFamily: 'Tajawal', color: AppTheme.textLight),
+            border: InputBorder.none, contentPadding: EdgeInsets.all(12)),
+        ),
+      ),
+      const SizedBox(height: 12),
+      Q8Button(label: 'إرسال رابط الدفع للفائز', color: Colors.green,
+        onTap: () async {
+          final ok = await vm.sendPaymentLink(auction.id, payLinkCtrl.text);
+          if (ok && context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ تم إرسال الرابط', style: TextStyle(fontFamily: 'Tajawal'))));
+        }),
+      const SizedBox(height: 8),
+      Q8Button(label: 'إبلاغ عن عدم الدفع ⚠️', color: Colors.red, onTap: onReport),
+    ]),
+  );
+}
+
+// ─── تقييم البائع ────────────────────────────────────────────────────────
+class _RatingSection extends StatefulWidget {
+  final int sellerId, auctionId;
+  const _RatingSection({required this.sellerId, required this.auctionId});
+  @override State<_RatingSection> createState() => _RatingSectionState();
+}
+class _RatingSectionState extends State<_RatingSection> {
+  int _stars = 0;
+  bool _sent = false;
+  final _commentCtrl = TextEditingController();
+
+  @override
+  void dispose() { _commentCtrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_sent) return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(14)),
+      child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Text('⭐', style: TextStyle(fontSize: 20)),
+        SizedBox(width: 8),
+        Text('شكراً! تم إرسال تقييمك',
+          style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, color: Colors.green)),
+      ]),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E8), borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.gold.withOpacity(0.3))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        const Text('⭐ قيّم البائع', style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 15)),
+        const SizedBox(height: 10),
+        Row(mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(5, (i) => GestureDetector(
+            onTap: () => setState(() => _stars = i + 1),
+            child: Icon(i < _stars ? Icons.star : Icons.star_border,
+              color: AppTheme.gold, size: 36),
+          ))),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _commentCtrl, textAlign: TextAlign.right, maxLines: 2,
+          style: const TextStyle(fontFamily: 'Tajawal', fontSize: 13),
+          decoration: InputDecoration(
+            hintText: 'تعليق اختياري...',
+            hintStyle: const TextStyle(fontFamily: 'Tajawal', color: AppTheme.textLight),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            contentPadding: const EdgeInsets.all(10)),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.gold,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            onPressed: _stars == 0 ? null : () async {
+              try {
+                await APIService.instance.addReview(widget.sellerId, _stars.toDouble(),
+                    comment: _commentCtrl.text.isNotEmpty ? _commentCtrl.text : null,
+                    auctionId: widget.auctionId);
+                if (mounted) setState(() => _sent = true);
+              } on APIError catch (e) {
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(e.message, style: const TextStyle(fontFamily: 'Tajawal'))));
+              }
+            },
+            child: const Text('إرسال التقييم',
+              style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, color: Colors.white)),
+          )),
+      ]),
+    );
+  }
+}
+
+// ─── سجل المزايدات ──────────────────────────────────────────────────────
+class _BidsSection extends StatelessWidget {
+  final List bids;
+  final bool showAll;
+  final VoidCallback onToggle;
+  const _BidsSection({required this.bids, required this.showAll, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    if (bids.isEmpty) return const SizedBox.shrink();
+    final shown = showAll ? bids : bids.take(5).toList();
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+        Text('سجل المزايدات (${bids.length})',
+          style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
+              fontSize: 16, color: AppTheme.textDark)),
+        const SizedBox(width: 6),
+        Container(width: 3, height: 20,
+          decoration: BoxDecoration(color: AppTheme.gold, borderRadius: BorderRadius.circular(2))),
+      ]),
+      const SizedBox(height: 10),
+      ...shown.asMap().entries.map((e) {
+        final i = e.key;
+        final bid = e.value;
+        final isTop = i == 0;
+        final amount = (bid['amount'] as num).toStringAsFixed(3);
+        final name = bid['bidder_name'] as String? ?? 'مجهول';
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isTop ? AppTheme.primary.withOpacity(0.05) : const Color(0xFFF7F6F3),
+            borderRadius: BorderRadius.circular(12),
+            border: isTop ? Border.all(color: AppTheme.gold.withOpacity(0.3)) : null),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Row(children: [
+              if (isTop) const Text('🥇 ', style: TextStyle(fontSize: 14)),
+              Text('$amount د.ك',
+                style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 14,
+                    color: isTop ? AppTheme.primary : AppTheme.textDark)),
+            ]),
+            Row(children: [
+              Text(name, style: const TextStyle(fontFamily: 'Tajawal', fontSize: 14, color: AppTheme.textMid)),
+              const SizedBox(width: 6),
+              const Icon(Icons.person_outline, size: 16, color: AppTheme.textLight),
+            ]),
+          ]),
+        );
+      }),
+      if (bids.length > 5)
+        TextButton(
+          onPressed: onToggle,
+          child: Text(showAll ? 'عرض أقل ▲' : 'عرض الكل (${bids.length}) ▼',
+            style: const TextStyle(fontFamily: 'Tajawal', color: AppTheme.primary, fontWeight: FontWeight.w700)),
+        ),
+    ]);
   }
 }

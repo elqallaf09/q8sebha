@@ -149,6 +149,37 @@ const init = async () => {
     await pool.query(sql);
   }
 
+  // ─── جداول ميزات جديدة ────────────────────────────────────────────────────
+  const newTables = [
+    `CREATE TABLE IF NOT EXISTS favorites (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+      auction_id INTEGER REFERENCES auctions(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS reviews (
+      id          SERIAL PRIMARY KEY,
+      reviewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      seller_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      auction_id  INTEGER REFERENCES auctions(id),
+      rating      NUMERIC NOT NULL,
+      comment     TEXT,
+      created_at  TIMESTAMP DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS auto_bids (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      auction_id INTEGER NOT NULL REFERENCES auctions(id) ON DELETE CASCADE,
+      max_amount NUMERIC NOT NULL,
+      is_active  INTEGER DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`,
+  ];
+  for (const sql of newTables) {
+    try { await pool.query(sql); } catch (_) {}
+  }
+
   // ─── Migrations — تضاف تلقائياً إذا لم تكن موجودة ──────────────────────
   const migrations = [
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE`,

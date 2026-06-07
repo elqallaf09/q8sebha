@@ -11,11 +11,28 @@ class ProductProvider extends ChangeNotifier {
 
   final _api = APIService.instance;
 
+  List<Product>? _allProducts; // نسخة أصلية قبل الفلتر
+
   Future<void> fetchProducts({String? category, String? search}) async {
     isLoading = true; notifyListeners();
-    try { products = await _api.products(category:category, search:search); }
+    try {
+      products = await _api.products(category:category, search:search);
+      _allProducts = List.of(products);
+    }
     on APIError catch (e) { errorMessage = e.message; }
     isLoading = false; notifyListeners();
+  }
+
+  void setFilteredProducts(List<Product> filtered) {
+    products = filtered;
+    notifyListeners();
+  }
+
+  void resetFilter() {
+    if (_allProducts != null) {
+      products = List.of(_allProducts!);
+      notifyListeners();
+    }
   }
 
   Future<void> fetchProduct(int id) async {

@@ -224,4 +224,55 @@ class APIService {
 
   Future<void> adminDeleteProduct(int id) =>
       request('DELETE', '/products/$id');
+
+  // ─── Favorites ──────────────────────────────────────────────────────────
+  Future<Map<String,dynamic>> getFavorites() => request('GET', '/favorites');
+
+  Future<String> toggleFavoriteProduct(int id) async {
+    final r = await request('POST', '/favorites/product/$id');
+    return r['action'] as String; // 'added' or 'removed'
+  }
+
+  Future<String> toggleFavoriteAuction(int id) async {
+    final r = await request('POST', '/favorites/auction/$id');
+    return r['action'] as String;
+  }
+
+  Future<bool> checkFavoriteProduct(int id) async {
+    final r = await request('GET', '/favorites/check?product_id=$id');
+    return r['is_favorite'] as bool;
+  }
+
+  Future<bool> checkFavoriteAuction(int id) async {
+    final r = await request('GET', '/favorites/check?auction_id=$id');
+    return r['is_favorite'] as bool;
+  }
+
+  // ─── Reviews ────────────────────────────────────────────────────────────
+  Future<Map<String,dynamic>> sellerReviews(int sellerId) =>
+      request('GET', '/reviews/seller/$sellerId', auth: false);
+
+  Future<void> addReview(int sellerId, double rating, {String? comment, int? auctionId}) =>
+      request('POST', '/reviews', body: {
+        'seller_id': sellerId, 'rating': rating,
+        if (comment != null) 'comment': comment,
+        if (auctionId != null) 'auction_id': auctionId,
+      });
+
+  // ─── Auctions extra ─────────────────────────────────────────────────────
+  Future<List<Map<String,dynamic>>> auctionBids(int auctionId) async {
+    final r = await request('GET', '/auctions/$auctionId/bids', auth: false);
+    return List<Map<String,dynamic>>.from(r['data']);
+  }
+
+  Future<Map<String,dynamic>> setAutoBid(int auctionId, double maxAmount) =>
+      request('POST', '/auctions/$auctionId/auto-bid', body: {'max_amount': maxAmount});
+
+  Future<Map<String,dynamic>?> getAutoBid(int auctionId) async {
+    final r = await request('GET', '/auctions/$auctionId/auto-bid');
+    return r['data'];
+  }
+
+  Future<void> cancelAutoBid(int auctionId) =>
+      request('DELETE', '/auctions/$auctionId/auto-bid');
 }

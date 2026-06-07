@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../providers/product_provider.dart';
 import '../../models/models.dart';
 import '../../main.dart';
 import '../../config/app_config.dart';
 import '../../widgets/common_widgets.dart';
 import '../../utils/responsive.dart';
+import '../../services/api_service.dart';
 import 'product_detail_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
@@ -22,6 +24,11 @@ class _ProductsScreenState extends State<ProductsScreen>
   bool _searchFocused = false;
   late final AnimationController _headerAnim;
   late final AnimationController _gridAnim;
+
+  // فلتر متقدم
+  double? _minPrice, _maxPrice;
+  String? _sortBy; // 'price_asc' | 'price_desc' | 'newest'
+  bool get _hasFilter => _minPrice != null || _maxPrice != null || _sortBy != null;
 
   static const _cats = [
     {'emoji': '✨', 'name': 'الكل',    'slug': null,        'color': 0xFF1A1A2E},
@@ -60,6 +67,179 @@ class _ProductsScreenState extends State<ProductsScreen>
     HapticFeedback.lightImpact();
     setState(() => _category = slug);
     context.read<ProductProvider>().fetchProducts(category: slug, search: _search.text);
+  }
+
+  void _showFilterSheet(BuildContext context) {
+    double? tempMin = _minPrice;
+    double? tempMax = _maxPrice;
+    String? tempSort = _sortBy;
+    final minCtrl = TextEditingController(text: _minPrice?.toStringAsFixed(0) ?? '');
+    final maxCtrl = TextEditingController(text: _maxPrice?.toStringAsFixed(0) ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setLocal) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.fromLTRB(20, 12, 20,
+              MediaQuery.of(context).viewInsets.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // handle
+              Container(width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 16),
+              const Text('تصفية متقدمة',
+                style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800,
+                    fontSize: 18, color: AppTheme.textDark)),
+              const SizedBox(height: 20),
+
+              // نطاق السعر
+              const Align(alignment: Alignment.centerRight,
+                child: Text('نطاق السعر (د.ك)',
+                  style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
+                      fontSize: 14, color: AppTheme.textMid))),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: minCtrl,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      hintText: 'من',
+                      hintStyle: const TextStyle(fontFamily: 'Tajawal'),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onChanged: (v) => tempMin = double.tryParse(v),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  child: Text('—', style: TextStyle(fontSize: 18, color: AppTheme.textMid)),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: maxCtrl,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      hintText: 'إلى',
+                      hintStyle: const TextStyle(fontFamily: 'Tajawal'),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onChanged: (v) => tempMax = double.tryParse(v),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 20),
+
+              // الترتيب
+              const Align(alignment: Alignment.centerRight,
+                child: Text('الترتيب',
+                  style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
+                      fontSize: 14, color: AppTheme.textMid))),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, children: [
+                for (final opt in [
+                  ('الأحدث', 'newest'),
+                  ('السعر: الأقل', 'price_asc'),
+                  ('السعر: الأعلى', 'price_desc'),
+                ])
+                  GestureDetector(
+                    onTap: () => setLocal(() => tempSort = opt.$2),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: tempSort == opt.$2 ? AppTheme.primary : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: tempSort == opt.$2 ? AppTheme.primary : Colors.grey.shade300),
+                      ),
+                      child: Text(opt.$1,
+                        style: TextStyle(fontFamily: 'Tajawal', fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: tempSort == opt.$2 ? Colors.white : AppTheme.textMid)),
+                    ),
+                  ),
+              ]),
+              const SizedBox(height: 24),
+
+              // أزرار
+              Row(children: [
+                // إعادة تعيين
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() { _minPrice = null; _maxPrice = null; _sortBy = null; });
+                      Navigator.pop(context);
+                      _doSearch();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppTheme.textMid),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                    child: const Text('إعادة تعيين',
+                      style: TextStyle(fontFamily: 'Tajawal', color: AppTheme.textMid)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // تطبيق
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _minPrice = tempMin;
+                        _maxPrice = tempMax;
+                        _sortBy = tempSort;
+                      });
+                      Navigator.pop(context);
+                      _applyFilter();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                    child: const Text('تطبيق',
+                      style: TextStyle(fontFamily: 'Tajawal', color: Colors.white,
+                          fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _applyFilter() {
+    final vm = context.read<ProductProvider>();
+    // نبدأ من القائمة الأصلية
+    vm.resetFilter();
+    var list = List.of(vm.products);
+
+    // فلتر السعر
+    if (_minPrice != null) list = list.where((p) => p.price >= _minPrice!).toList();
+    if (_maxPrice != null) list = list.where((p) => p.price <= _maxPrice!).toList();
+
+    // ترتيب
+    if (_sortBy == 'price_asc')  list.sort((a, b) => a.price.compareTo(b.price));
+    if (_sortBy == 'price_desc') list.sort((a, b) => b.price.compareTo(a.price));
+    if (_sortBy == 'newest')     list.sort((a, b) => b.id.compareTo(a.id));
+
+    if (_hasFilter) vm.setFilteredProducts(list);
   }
 
   @override
@@ -298,19 +478,23 @@ class _ProductsScreenState extends State<ProductsScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             // زر الفلتر
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE8E6E0)),
+            GestureDetector(
+              onTap: () => _showFilterSheet(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _hasFilter ? AppTheme.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _hasFilter ? AppTheme.primary : const Color(0xFFE8E6E0)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.tune_rounded, size: 14, color: _hasFilter ? Colors.white : AppTheme.textMid),
+                  const SizedBox(width: 4),
+                  Text(_hasFilter ? 'تصفية ✓' : 'تصفية',
+                    style: TextStyle(fontFamily: 'Tajawal',
+                        fontSize: 12, color: _hasFilter ? Colors.white : AppTheme.textMid)),
+                ]),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.tune_rounded, size: 14, color: AppTheme.textMid),
-                const SizedBox(width: 4),
-                const Text('تصفية', style: TextStyle(fontFamily: 'Tajawal',
-                    fontSize: 12, color: AppTheme.textMid)),
-              ]),
             ),
             // العدد
             RichText(
@@ -423,6 +607,7 @@ class _ProductCardState extends State<_ProductCard>
   late final Animation<double> _scale;
   late final Animation<double> _fade;
   bool _liked = false;
+  bool _favLoading = false;
 
   @override
   void initState() {
@@ -432,8 +617,36 @@ class _ProductCardState extends State<_ProductCard>
     _scale = CurvedAnimation(parent: _anim, curve: Curves.easeOutBack);
     _fade  = CurvedAnimation(parent: _anim, curve: Curves.easeOut);
     Future.delayed(Duration(milliseconds: widget.index * 50), () {
-      if (mounted) _anim.forward();
+      if (mounted) {
+        _anim.forward();
+        _checkFav();
+      }
     });
+  }
+
+  Future<void> _checkFav() async {
+    try {
+      final isFav = await APIService.instance.checkFavoriteProduct(widget.product.id);
+      if (mounted) setState(() => _liked = isFav);
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFav() async {
+    if (_favLoading) return;
+    HapticFeedback.lightImpact();
+    setState(() { _favLoading = true; _liked = !_liked; });
+    try {
+      await APIService.instance.toggleFavoriteProduct(widget.product.id);
+    } catch (_) {
+      if (mounted) setState(() => _liked = !_liked); // ارجع للحالة السابقة
+    }
+    if (mounted) setState(() => _favLoading = false);
+  }
+
+  void _shareProduct() {
+    final p = widget.product;
+    final price = p.price.toStringAsFixed(p.price % 1 == 0 ? 0 : 3);
+    Share.share('🛒 ${p.name}\n💰 السعر: $price د.ك\n\nتسوّق معنا على تطبيق Q8Sebha 📿');
   }
 
   @override
@@ -518,30 +731,42 @@ class _ProductCardState extends State<_ProductCard>
                         ),
                       ),
 
-                    // زر المفضلة
+                    // زر المفضلة + مشاركة
                     Positioned(
                       top: 8, left: 8,
-                      child: GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          setState(() => _liked = !_liked);
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 30, height: 30,
-                          decoration: BoxDecoration(
-                            color: _liked
-                                ? Colors.red.shade400
-                                : Colors.black.withOpacity(0.25),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            _liked ? Icons.favorite : Icons.favorite_border,
-                            color: Colors.white,
-                            size: 14,
+                      child: Column(children: [
+                        GestureDetector(
+                          onTap: _toggleFav,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 30, height: 30,
+                            decoration: BoxDecoration(
+                              color: _liked
+                                  ? Colors.red.shade400
+                                  : Colors.black.withOpacity(0.25),
+                              shape: BoxShape.circle,
+                            ),
+                            child: _favLoading
+                                ? const SizedBox(width: 14, height: 14,
+                                    child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white))
+                                : Icon(_liked ? Icons.favorite : Icons.favorite_border,
+                                    color: Colors.white, size: 14),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        GestureDetector(
+                          onTap: _shareProduct,
+                          child: Container(
+                            width: 30, height: 30,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.25),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.share_rounded,
+                                color: Colors.white, size: 14),
+                          ),
+                        ),
+                      ]),
                     ),
 
                     // السعر فوق الصورة

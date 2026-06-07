@@ -6,6 +6,7 @@ import '../products/products_screen.dart';
 import '../auctions/auction_list_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../profile/profile_screen.dart';
+import '../favorites/favorites_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -18,6 +19,7 @@ class _MainScreenState extends State<MainScreen> {
   final _screens = const [
     ProductsScreen(),
     AuctionListScreen(),
+    FavoritesScreen(),
     NotificationsScreen(),
     ProfileScreen(),
   ];
@@ -32,7 +34,7 @@ class _MainScreenState extends State<MainScreen> {
         unread: unread,
         onTap: (i) {
           setState(() => _tab = i);
-          if (i == 2) context.read<NotificationProvider>().fetchAll();
+          if (i == 3) context.read<NotificationProvider>().fetchAll();
         },
       ),
     );
@@ -67,10 +69,12 @@ class _BottomNav extends StatelessWidget {
                   label: 'المنتجات', index: 0, selected: selected, onTap: onTap),
               _NavItem(icon: Icons.gavel_outlined, activeIcon: Icons.gavel_rounded,
                   label: 'المزادات', index: 1, selected: selected, onTap: onTap),
+              _NavItem(icon: Icons.favorite_outline_rounded, activeIcon: Icons.favorite_rounded,
+                  label: 'المفضلة', index: 2, selected: selected, onTap: onTap),
               _NavItem(icon: Icons.notifications_outlined, activeIcon: Icons.notifications_rounded,
-                  label: 'الإشعارات', index: 2, selected: selected, onTap: onTap, badge: unread),
+                  label: 'الإشعارات', index: 3, selected: selected, onTap: onTap, badge: unread),
               _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded,
-                  label: 'حسابي', index: 3, selected: selected, onTap: onTap),
+                  label: 'حسابي', index: 4, selected: selected, onTap: onTap),
             ],
           ),
         ),

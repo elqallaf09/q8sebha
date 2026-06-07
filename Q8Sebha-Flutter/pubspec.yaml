@@ -29,6 +29,15 @@ dependencies:
   # رفع الصور
   image_picker: ^1.1.2
 
+  # مشاركة
+  share_plus: ^9.0.0
+
+  # فتح روابط + واتساب
+  url_launcher: ^6.3.0
+
+  # تصغير/تكبير الصور
+  photo_view: ^0.14.0
+
   # أيقونات
   cupertino_icons: ^1.0.8
 

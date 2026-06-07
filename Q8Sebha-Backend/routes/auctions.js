@@ -169,6 +169,74 @@ router.post('/:id/payment-link', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
+// ─── GET /auctions/:id/bids — سجل المزايدات ──────────────────────────────
+router.get('/:id/bids', async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT b.id, b.amount, b.created_at,
+             u.name AS bidder_name
+      FROM bids b JOIN users u ON u.id = b.bidder_id
+      WHERE b.auction_id = $1
+      ORDER BY b.amount DESC`, [req.params.id]);
+    res.json({ success: true, data: rows });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+// ─── POST /auctions/:id/auto-bid — ضبط مزايدة تلقائية ───────────────────
+router.post('/:id/auto-bid', authenticate, async (req, res) => {
+  const { max_amount } = req.body;
+  const auctionId = +req.params.id;
+  if (!max_amount || +max_amount <= 0) return res.status(400).json({ success: false, message: 'أدخل الحد الأعلى' });
+
+  try {
+    const auction = (await db.query('SELECT * FROM auctions WHERE id=$1', [auctionId])).rows[0];
+    if (!auction) return res.status(404).json({ success: false, message: 'المزاد غير موجود' });
+    if (auction.status !== 'active') return res.status(400).json({ success: false, message: 'المزاد منتهٍ' });
+    if (auction.seller_id === req.user.id) return res.status(400).json({ success: false, message: 'لا يمكنك المزايدة على مزادك' });
+    if (+max_amount <= +auction.current_price) return res.status(400).json({ success: false, message: `الحد الأعلى يجب أن يكون أكثر من ${auction.current_price} د.ك` });
+
+    // حفظ أو تحديث المزايدة التلقائية
+    await db.query(`
+      INSERT INTO auto_bids (user_id, auction_id, max_amount, is_active)
+      VALUES ($1, $2, $3, 1)
+      ON CONFLICT (user_id, auction_id) DO UPDATE SET max_amount=$3, is_active=1`,
+      [req.user.id, auctionId, +max_amount]);
+
+    // مزايدة فورية بالحد الأدنى الممكن
+    const nextBid = +auction.current_price + +auction.bid_increment;
+    if (nextBid <= +max_amount) {
+      await db.query('INSERT INTO bids (auction_id,bidder_id,amount) VALUES ($1,$2,$3)',
+        [auctionId, req.user.id, nextBid]);
+      await db.query('UPDATE auctions SET current_price=$1, current_bidder_id=$2, bids_count=bids_count+1 WHERE id=$3',
+        [nextBid, req.user.id, auctionId]);
+
+      const msg = JSON.stringify({ type:'new_bid', auctionId, amount: nextBid, bidderName: req.user.name, auto: true });
+      if (global.wsClients) Object.values(global.wsClients).forEach(ws => { try { ws.send(msg); } catch(_){} });
+    }
+
+    res.json({ success: true, message: `تم تفعيل المزايدة التلقائية حتى ${max_amount} د.ك` });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+// ─── GET /auctions/:id/auto-bid — حالة المزايدة التلقائية ────────────────
+router.get('/:id/auto-bid', authenticate, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT * FROM auto_bids WHERE user_id=$1 AND auction_id=$2 AND is_active=1',
+      [req.user.id, req.params.id]);
+    res.json({ success: true, data: rows[0] || null });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+// ─── DELETE /auctions/:id/auto-bid — إلغاء المزايدة التلقائية ────────────
+router.delete('/:id/auto-bid', authenticate, async (req, res) => {
+  try {
+    await db.query('UPDATE auto_bids SET is_active=0 WHERE user_id=$1 AND auction_id=$2',
+      [req.user.id, req.params.id]);
+    res.json({ success: true, message: 'تم إلغاء المزايدة التلقائية' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
 // ─── POST /auctions/:id/report ────────────────────────────────────────────
 router.post('/:id/report', authenticate, async (req, res) => {
   const auction = (await db.query('SELECT * FROM auctions WHERE id=$1', [req.params.id])).rows[0];
