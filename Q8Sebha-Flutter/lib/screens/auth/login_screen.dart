@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../theme/app_theme.dart';
-import '../../widgets/q8_widgets.dart';
+import '../../main.dart';
+import '../../widgets/common_widgets.dart';
 
 // ─── بيانات رموز الدول ────────────────────────────────────────────────────
 class CountryCode {
