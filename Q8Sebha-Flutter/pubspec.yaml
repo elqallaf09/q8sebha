@@ -29,6 +29,12 @@ dependencies:
   # رفع الصور
   image_picker: ^1.1.2
 
+  # بيومتري (Face ID / بصمة الإصبع)
+  local_auth: ^2.3.0
+
+  # تخزين آمن (لحفظ بيانات Face ID)
+  flutter_secure_storage: ^9.2.2
+
   # مشاركة
   share_plus: ^9.0.0
 

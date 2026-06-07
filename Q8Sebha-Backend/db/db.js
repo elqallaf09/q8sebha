@@ -36,7 +36,7 @@ const init = async () => {
       total_purchases  INTEGER DEFAULT 0,
       total_wins       INTEGER DEFAULT 0,
       total_auctions   INTEGER DEFAULT 0,
-      rating           NUMERIC DEFAULT 5.0,
+      rating           NUMERIC,  -- NULL حتى يتلقى تقييماً حقيقياً
       created_at       TIMESTAMP DEFAULT NOW()
     )`,
     `CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -151,6 +151,13 @@ const init = async () => {
 
   // ─── جداول ميزات جديدة ────────────────────────────────────────────────────
   const newTables = [
+    `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      code       TEXT NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`,
     `CREATE TABLE IF NOT EXISTS favorites (
       id         SERIAL PRIMARY KEY,
       user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

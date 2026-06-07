@@ -1,9 +1,43 @@
-const router  = require('express').Router();
-const bcrypt  = require('bcryptjs');
-const jwt     = require('jsonwebtoken');
+const router   = require('express').Router();
+const bcrypt   = require('bcryptjs');
+const jwt      = require('jsonwebtoken');
+const crypto   = require('crypto');
+const nodemailer = require('nodemailer');
 const { body, validationResult } = require('express-validator');
-const db      = require('../db/db');
+const db       = require('../db/db');
 const { authenticate } = require('../middleware/auth');
+
+// ─── إعداد البريد الإلكتروني ─────────────────────────────────────────────
+const mailer = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // App Password من Google
+  },
+});
+
+async function sendResetEmail(email, code) {
+  await mailer.sendMail({
+    from: `"Q8Sebha 📿" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'رمز استعادة كلمة المرور — Q8Sebha',
+    html: `
+      <div dir="rtl" style="font-family:Arial;max-width:500px;margin:auto;padding:24px;border:1px solid #eee;border-radius:12px">
+        <h2 style="color:#1A1A2E;text-align:center">📿 Q8Sebha</h2>
+        <p style="color:#333">مرحباً،</p>
+        <p style="color:#333">طلبت استعادة كلمة المرور لحسابك. استخدم الرمز التالي:</p>
+        <div style="background:#1A1A2E;color:#FFD700;font-size:36px;font-weight:bold;
+                    text-align:center;padding:20px;border-radius:12px;letter-spacing:8px;margin:20px 0">
+          ${code}
+        </div>
+        <p style="color:#666;font-size:13px">• الرمز صالح لمدة <strong>10 دقائق</strong> فقط.</p>
+        <p style="color:#666;font-size:13px">• إذا لم تطلب هذا، تجاهل الرسالة.</p>
+        <hr style="margin:20px 0;border:none;border-top:1px solid #eee">
+        <p style="color:#999;font-size:11px;text-align:center">Q8Sebha — مسابيح وأحجار كريمة</p>
+      </div>
+    `,
+  });
+}
 
 const JWT_SECRET  = process.env.JWT_SECRET  || 'q8sebha_jwt_secret_2026';
 const JWT_REFRESH = process.env.JWT_REFRESH || 'q8sebha_refresh_2026';
@@ -152,6 +186,84 @@ router.put('/profile', authenticate, async (req, res) => {
             total_purchases,total_wins,total_auctions,rating,is_verified
      FROM users WHERE id=$1`, [req.user.id]);
   res.json({ success: true, data: rows[0] });
+});
+
+// ─── POST /auth/forgot-password ──────────────────────────────────────────
+// يرسل رمز 6 أرقام للإيميل المسجّل
+router.post('/forgot-password', [
+  body('email').trim().notEmpty().isEmail().withMessage('أدخل بريداً إلكترونياً صحيحاً'),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, message: errors.array()[0].msg });
+
+  const { email } = req.body;
+  try {
+    const { rows } = await db.query('SELECT id FROM users WHERE email=$1', [email.trim().toLowerCase()]);
+    // نرد بنجاح حتى لو الإيميل غير موجود (أمان ضد تعداد الإيميلات)
+    if (!rows.length) return res.json({ success: true, message: 'إذا كان الإيميل مسجّلاً ستصلك رسالة' });
+
+    const userId = rows[0].id;
+    const code   = crypto.randomInt(100000, 999999).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 دقائق
+
+    // احذف رموز سابقة لنفس المستخدم
+    await db.query('DELETE FROM password_reset_tokens WHERE user_id=$1', [userId]);
+    await db.query(
+      'INSERT INTO password_reset_tokens (user_id, code, expires_at) VALUES ($1,$2,$3)',
+      [userId, await bcrypt.hash(code, 8), expiry]
+    );
+
+    // أرسل الإيميل
+    if (process.env.EMAIL_USER) {
+      await sendResetEmail(email.trim(), code);
+    } else {
+      // وضع التطوير — اطبع الكود في السجل
+      console.log(`[DEV] Reset code for ${email}: ${code}`);
+    }
+
+    res.json({ success: true, message: 'إذا كان الإيميل مسجّلاً ستصلك رسالة' });
+  } catch (err) {
+    console.error('[forgot-password]', err.message);
+    res.status(500).json({ success: false, message: 'خطأ في الخادم' });
+  }
+});
+
+// ─── POST /auth/reset-password ────────────────────────────────────────────
+// يتحقق من الكود ويغيّر كلمة المرور
+router.post('/reset-password', [
+  body('email').trim().notEmpty().isEmail(),
+  body('code').trim().notEmpty().withMessage('الرمز مطلوب'),
+  body('new_password').isLength({ min: 6 }).withMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, message: errors.array()[0].msg });
+
+  const { email, code, new_password } = req.body;
+  try {
+    const userRes = await db.query('SELECT id FROM users WHERE email=$1', [email.trim().toLowerCase()]);
+    if (!userRes.rows.length) return res.status(400).json({ success: false, message: 'الرمز غير صحيح أو منتهي الصلاحية' });
+
+    const userId = userRes.rows[0].id;
+    const tokenRes = await db.query(
+      'SELECT * FROM password_reset_tokens WHERE user_id=$1 AND expires_at > NOW()',
+      [userId]
+    );
+    if (!tokenRes.rows.length) return res.status(400).json({ success: false, message: 'الرمز غير صحيح أو منتهي الصلاحية' });
+
+    const valid = await bcrypt.compare(code.trim(), tokenRes.rows[0].code);
+    if (!valid) return res.status(400).json({ success: false, message: 'الرمز غير صحيح أو منتهي الصلاحية' });
+
+    const hash = await bcrypt.hash(new_password, 10);
+    await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, userId]);
+    await db.query('DELETE FROM password_reset_tokens WHERE user_id=$1', [userId]);
+    // إلغاء كل جلسات المستخدم
+    await db.query('DELETE FROM refresh_tokens WHERE user_id=$1', [userId]);
+
+    res.json({ success: true, message: 'تم تغيير كلمة المرور بنجاح' });
+  } catch (err) {
+    console.error('[reset-password]', err.message);
+    res.status(500).json({ success: false, message: 'خطأ في الخادم' });
+  }
 });
 
 module.exports = router;

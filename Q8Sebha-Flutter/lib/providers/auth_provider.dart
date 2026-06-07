@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/biometric_service.dart';
 import '../services/websocket_service.dart';
 
 enum AppState { splash, auth, main, guest }
@@ -30,7 +31,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// تسجيل الدخول بأي معرّف: هاتف، إيميل، أو اسم مستخدم
-  Future<void> login(String identifier, String password) async {
+  Future<void> login(String identifier, String password, {bool saveBiometric = false}) async {
     isLoading = true; errorMessage = null; notifyListeners();
     try {
       final r = await _api.login(identifier, password);
@@ -39,6 +40,11 @@ class AuthProvider extends ChangeNotifier {
       currentUser = User.fromJson(d['user']);
       _ws.connect(currentUser!.id);
       appState = AppState.main;
+
+      // احفظ بيانات البيومتري إذا طُلب ذلك
+      if (saveBiometric) {
+        await BiometricService.instance.saveCredentials(identifier, password);
+      }
     } on APIError catch (e) { errorMessage = e.message; }
     catch (_) { errorMessage = 'خطأ في الاتصال بالخادم'; }
     isLoading = false; notifyListeners();

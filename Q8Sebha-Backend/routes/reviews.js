@@ -37,7 +37,9 @@ router.post('/', authenticate, async (req, res) => {
 router.get('/seller/:id', async (req, res) => {
   try {
     const { rows } = await db.query(`
-      SELECT r.*, u.name AS reviewer_name, a.title AS auction_title
+      SELECT r.id, r.rating, r.comment, r.created_at,
+             u.name AS reviewer_name,
+             a.title AS auction_title
       FROM reviews r
       JOIN users u ON u.id = r.reviewer_id
       LEFT JOIN auctions a ON a.id = r.auction_id
@@ -45,11 +47,19 @@ router.get('/seller/:id', async (req, res) => {
       ORDER BY r.created_at DESC
       LIMIT 20`, [req.params.id]);
 
+    // متوسط حقيقي فقط — لا قيم وهمية
     const avg = rows.length
-      ? (rows.reduce((s, r) => s + +r.rating, 0) / rows.length).toFixed(1)
-      : '5.0';
+      ? +(rows.reduce((s, r) => s + +r.rating, 0) / rows.length).toFixed(1)
+      : null;
 
-    res.json({ success: true, data: rows, average: +avg, count: rows.length });
+    res.json({
+      success: true,
+      data: {
+        reviews: rows,
+        average: avg,      // null إذا لا يوجد أي تقييم
+        count: rows.length,
+      }
+    });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 

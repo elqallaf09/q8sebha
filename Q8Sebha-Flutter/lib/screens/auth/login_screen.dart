@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../main.dart';
 import '../../widgets/common_widgets.dart';
+import '../../services/biometric_service.dart';
+import 'forgot_password_screen.dart';
 
 // ─── بيانات رموز الدول ────────────────────────────────────────────────────
 class CountryCode {
@@ -59,6 +62,39 @@ class _LoginScreenState extends State<LoginScreen> {
 
   CountryCode _country = _countries[0];
 
+  // Face ID
+  bool _biometricAvail   = false;
+  bool _biometricEnabled = false;
+  BiometricType? _bioType;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometric();
+  }
+
+  Future<void> _checkBiometric() async {
+    final avail   = await BiometricService.instance.isAvailable();
+    final enabled = await BiometricService.instance.isEnabled();
+    final type    = await BiometricService.instance.getType();
+    if (mounted) setState(() {
+      _biometricAvail   = avail;
+      _biometricEnabled = enabled;
+      _bioType          = type;
+    });
+  }
+
+  Future<void> _loginWithBiometric(AuthProvider auth) async {
+    final ok = await BiometricService.instance.authenticate();
+    if (!ok) return;
+    final creds = await BiometricService.instance.getSavedCredentials();
+    if (creds == null) {
+      setState(() => _localError = 'لا توجد بيانات محفوظة، سجّل الدخول يدوياً أولاً');
+      return;
+    }
+    auth.login(creds['identifier']!, creds['password']!);
+  }
+
   String get _fullPhone =>
       '${_country.code}${_phone.text.trim().replaceAll(RegExp(r'^0+'), '')}';
 
@@ -97,8 +133,88 @@ class _LoginScreenState extends State<LoginScreen> {
       if (_password.text.isEmpty) return _setLocalError('أدخل كلمة المرور');
 
       final id = _phoneMode ? _fullPhone : _identifier.text.trim();
-      auth.login(id, _password.text);
+      final pass = _password.text;
+      // هل نحفظ للبيومتري؟ (نسأل فقط إذا الجهاز يدعمه ولم يفعّله بعد)
+      if (_biometricAvail && !_biometricEnabled) {
+        auth.login(id, pass).then((_) {
+          if (auth.isLoggedIn && mounted) _askEnableBiometric(id, pass);
+        });
+      } else {
+        auth.login(id, pass);
+      }
     }
+  }
+
+  void _askEnableBiometric(String id, String pass) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 36, height: 4,
+            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4))),
+          const SizedBox(height: 16),
+          Icon(
+            _bioType == BiometricType.face
+                ? Icons.face_retouching_natural
+                : Icons.fingerprint,
+            size: 52, color: AppTheme.primary,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _bioType == BiometricType.face
+                ? 'تفعيل Face ID؟'
+                : 'تفعيل بصمة الإصبع؟',
+            style: const TextStyle(fontFamily: 'Tajawal',
+                fontWeight: FontWeight.w800, fontSize: 20),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'ادخل بسرعة وأمان في المرات القادمة بدون كتابة كلمة المرور',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: Colors.grey),
+          ),
+          const SizedBox(height: 20),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.grey),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                ),
+                child: const Text('لاحقاً',
+                  style: TextStyle(fontFamily: 'Tajawal', color: Colors.grey)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await BiometricService.instance.saveCredentials(id, pass);
+                  if (mounted) setState(() => _biometricEnabled = true);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                ),
+                child: const Text('تفعيل',
+                  style: TextStyle(fontFamily: 'Tajawal', color: Colors.white,
+                      fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
   }
 
   @override
@@ -219,6 +335,55 @@ class _LoginScreenState extends State<LoginScreen> {
                     isLoading: auth.isLoading,
                     onTap: () => _onSubmit(auth),
                   ),
+                  // ─── زر Face ID / بصمة (فقط في وضع الدخول) ──────────
+                  if (!_isSignup && _biometricAvail && _biometricEnabled) ...[
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () => _loginWithBiometric(auth),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F0EB),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE0DED8)),
+                        ),
+                        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Icon(
+                            _bioType == BiometricType.face
+                                ? Icons.face_retouching_natural
+                                : Icons.fingerprint,
+                            color: AppTheme.primary, size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _bioType == BiometricType.face
+                                ? 'الدخول بواسطة Face ID'
+                                : 'الدخول بواسطة البصمة',
+                            style: const TextStyle(fontFamily: 'Tajawal',
+                                fontWeight: FontWeight.w700, fontSize: 14,
+                                color: AppTheme.primary),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  ],
+
+                  // ─── نسيت كلمة المرور (ظاهر فقط في وضع الدخول) ──────
+                  if (!_isSignup) ...[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero,
+                            minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        child: const Text('نسيت كلمة المرور؟',
+                          style: TextStyle(fontFamily: 'Tajawal', fontSize: 12,
+                              color: AppTheme.primary)),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   const Divider(height: 1),
                   const SizedBox(height: 6),

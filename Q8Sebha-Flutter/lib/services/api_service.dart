@@ -101,6 +101,13 @@ class APIService {
 
   Future<Map<String,dynamic>> me() => request('GET', '/auth/me');
 
+  Future<void> forgotPassword(String email) =>
+      request('POST', '/auth/forgot-password', body: {'email': email}, auth: false);
+
+  Future<void> resetPassword(String email, String code, String newPassword) =>
+      request('POST', '/auth/reset-password',
+          body: {'email': email, 'code': code, 'new_password': newPassword}, auth: false);
+
   Future<void> logout() async {
     final rt = await TokenStore.getRefresh();
     if (rt != null) {
