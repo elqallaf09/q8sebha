@@ -4,7 +4,7 @@ import '../services/api_service.dart';
 import '../services/biometric_service.dart';
 import '../services/websocket_service.dart';
 
-enum AppState { splash, auth, main, guest }
+enum AppState { splash, auth, main, guest, loading }
 
 class AuthProvider extends ChangeNotifier {
   AppState appState = AppState.splash;
@@ -18,15 +18,25 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider() { _checkSession(); }
 
   Future<void> _checkSession() async {
-    await Future.delayed(const Duration(milliseconds:1500));
+    appState = AppState.loading;
+    await Future.delayed(const Duration(milliseconds: 1200));
     final token = await TokenStore.getAccess();
     if (token == null) { appState = AppState.auth; notifyListeners(); return; }
     try {
-      final r = await _api.me();
+      final r = await _api.me().timeout(const Duration(seconds: 8));
       currentUser = User.fromJson(r['data']);
       _ws.connect(currentUser!.id);
       appState = AppState.main;
-    } catch (_) { appState = AppState.auth; }
+    } catch (_) {
+      // السيرفر مفقود أو token منتهي → login
+      appState = AppState.auth;
+    }
+    notifyListeners();
+  }
+
+  /// إجبار الخروج لشاشة الدخول (عند timeout)
+  void forceGuest() {
+    appState = AppState.auth;
     notifyListeners();
   }
 

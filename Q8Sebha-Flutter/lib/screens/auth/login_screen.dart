@@ -396,7 +396,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ]),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
+              // ─── Powered by ───────────────────────────────────────────
+              Text(
+                'Powered by M.Q',
+                style: TextStyle(
+                  fontFamily: 'Tajawal',
+                  fontSize: 11,
+                  color: Colors.white.withOpacity(0.25),
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 12),
             ]),
           ),
         ),

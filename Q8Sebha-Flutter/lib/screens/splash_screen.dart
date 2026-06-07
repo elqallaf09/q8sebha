@@ -27,6 +27,15 @@ class _SplashScreenState extends State<SplashScreen>
     _slide = Tween<double>(begin: 30, end: 0).animate(
         CurvedAnimation(parent: _ctrl, curve: const Interval(0.3, 0.8, curve: Curves.easeOut)));
     _ctrl.forward();
+
+    // timeout — إذا لم يتحدد الـ state خلال 12 ثانية نذهب للـ login
+    Future.delayed(const Duration(seconds: 12), () {
+      if (!mounted) return;
+      final auth = context.read<AuthProvider>();
+      if (auth.appState == AppState.loading) {
+        auth.forceGuest();
+      }
+    });
   }
 
   @override
@@ -36,9 +45,10 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (_, auth, __) {
-        if (auth.appState == AppState.auth)  return const LoginScreen();
-        if (auth.appState == AppState.main)  return const MainScreen();
-        if (auth.appState == AppState.guest) return const MainScreen();
+        if (auth.appState == AppState.auth)    return const LoginScreen();
+        if (auth.appState == AppState.main)    return const MainScreen();
+        if (auth.appState == AppState.guest)   return const MainScreen();
+        // loading أو splash → يكمل تحميل السبلاش
 
         return Scaffold(
           body: Container(
