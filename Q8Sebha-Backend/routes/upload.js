@@ -1,18 +1,13 @@
-const router      = require('express').Router();
-const multer      = require('multer');
-const cloudinary  = require('cloudinary').v2;
-const streamifier = require('streamifier');
+const router = require('express').Router();
+const multer  = require('multer');
 const { authenticate } = require('../middleware/auth');
 
-// ─── إعداد Cloudinary ────────────────────────────────────────────────────
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure:     true,
-});
+// ─── إعداد Supabase Storage ───────────────────────────────────────────────
+const SUPABASE_URL     = process.env.SUPABASE_URL;
+const SUPABASE_SVC_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const BUCKET           = 'products';
 
-// multer في الذاكرة (لا disk — مهم لـ Railway)
+// multer في الذاكرة
 const upload = multer({
   storage: multer.memoryStorage(),
   limits:  { fileSize: 8 * 1024 * 1024 },
@@ -24,35 +19,47 @@ const upload = multer({
   },
 });
 
-// رفع ملف واحد على Cloudinary
-const uploadToCloud = (buffer) =>
-  new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: 'q8sebha',
-        transformation: [{ quality: 'auto:good', fetch_format: 'auto', width: 1200, crop: 'limit' }],
-      },
-      (err, result) => err ? reject(err) : resolve(result.secure_url)
-    );
-    streamifier.createReadStream(buffer).pipe(stream);
+// رفع ملف واحد على Supabase Storage
+const uploadToSupabase = async (buffer, originalName, mimetype) => {
+  const ext  = (originalName.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const url  = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`;
+
+  const res = await fetch(url, {
+    method:  'POST',
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_SVC_KEY}`,
+      'Content-Type':  mimetype || 'image/jpeg',
+      'x-upsert':      'true',
+    },
+    body: buffer,
   });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Supabase Storage error: ${txt}`);
+  }
+
+  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+};
 
 // ─── POST /upload ─────────────────────────────────────────────────────────
 router.post('/', authenticate, upload.array('images', 6), async (req, res) => {
   if (!req.files?.length)
     return res.status(400).json({ success: false, message: 'لا توجد صور' });
 
-  // إذا Cloudinary غير مضبوط — fallback للـ URL المحلي (dev mode)
-  if (!process.env.CLOUDINARY_CLOUD_NAME) {
-    console.warn('⚠️  CLOUDINARY غير مضبوط — استخدم متغيرات البيئة');
+  if (!SUPABASE_URL || !SUPABASE_SVC_KEY) {
+    console.warn('⚠️  SUPABASE_URL أو SUPABASE_SERVICE_ROLE_KEY غير مضبوط');
     return res.status(500).json({ success: false, message: 'خدمة رفع الصور غير مضبوطة' });
   }
 
   try {
-    const urls = await Promise.all(req.files.map(f => uploadToCloud(f.buffer)));
+    const urls = await Promise.all(
+      req.files.map(f => uploadToSupabase(f.buffer, f.originalname, f.mimetype))
+    );
     res.json({ success: true, data: { urls } });
   } catch (err) {
-    console.error('[upload cloudinary]', err.message);
+    console.error('[upload supabase]', err.message);
     res.status(500).json({ success: false, message: 'فشل رفع الصورة، حاول مجدداً' });
   }
 });
