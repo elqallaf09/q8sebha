@@ -38,7 +38,6 @@ class Q8Field extends StatelessWidget {
     keyboardType: keyboard,
     obscureText: obscure,
     textAlign: TextAlign.right,
-    textDirection: TextDirection.rtl,
     decoration: InputDecoration(
       hintText: hint,
       hintTextDirection: TextDirection.rtl,
