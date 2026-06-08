@@ -272,8 +272,15 @@ class _AddProductScreenState extends State<_AddProductScreen> {
     }
     setState(() { _loading=true; _error=null; });
     try {
+      // رفع الصور (اختياري — لو فشل نكمل بدون صور)
       List<String> urls = [];
-      if (_images.isNotEmpty) urls = await APIService.instance.uploadImages(_images);
+      if (_images.isNotEmpty) {
+        try {
+          urls = await APIService.instance.uploadImages(_images);
+        } catch (_) {
+          // تجاهل خطأ رفع الصور وأكمل الإضافة
+        }
+      }
       await APIService.instance.adminAddProduct({
         'name': _name.text,
         'price': double.tryParse(_price.text) ?? 0,
@@ -322,7 +329,7 @@ class _AddProductScreenState extends State<_AddProductScreen> {
             hint: const Text('اختر التصنيف', style:TextStyle(fontFamily:'Tajawal', fontSize:14)),
             items: _categories.map<DropdownMenuItem<String>>((c)=>DropdownMenuItem(
               value:c['id'].toString(),
-              child:Text('${c['emoji']} ${c['name']}', style:const TextStyle(fontFamily:'Tajawal', fontSize:14)),
+              child:Text(c['name'] ?? '', style:const TextStyle(fontFamily:'Tajawal', fontSize:14)),
             )).toList(),
             onChanged:(v)=>setState(()=>_categoryId=v),
           ),

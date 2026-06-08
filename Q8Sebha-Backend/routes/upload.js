@@ -1,5 +1,6 @@
-const router = require('express').Router();
+const router  = require('express').Router();
 const multer  = require('multer');
+const https   = require('https');
 const { authenticate } = require('../middleware/auth');
 
 // ─── إعداد Supabase Storage ───────────────────────────────────────────────
@@ -20,28 +21,35 @@ const upload = multer({
 });
 
 // رفع ملف واحد على Supabase Storage
-const uploadToSupabase = async (buffer, originalName, mimetype) => {
-  const ext  = (originalName.split('.').pop() || 'jpg').toLowerCase();
-  const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-  const url  = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`;
+const uploadToSupabase = (buffer, originalName, mimetype) => new Promise((resolve, reject) => {
+  const ext      = (originalName.split('.').pop() || 'jpg').toLowerCase();
+  const filePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const urlObj   = new URL(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${filePath}`);
 
-  const res = await fetch(url, {
-    method:  'POST',
-    headers: {
+  const options = {
+    hostname: urlObj.hostname,
+    path:     urlObj.pathname,
+    method:   'POST',
+    headers:  {
       'Authorization': `Bearer ${SUPABASE_SVC_KEY}`,
       'Content-Type':  mimetype || 'image/jpeg',
+      'Content-Length': buffer.length,
       'x-upsert':      'true',
     },
-    body: buffer,
+  };
+
+  const req = https.request(options, (res) => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => {
+      if (res.statusCode >= 400) return reject(new Error(`Supabase Storage error ${res.statusCode}: ${data}`));
+      resolve(`${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${filePath}`);
+    });
   });
-
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Supabase Storage error: ${txt}`);
-  }
-
-  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
-};
+  req.on('error', reject);
+  req.write(buffer);
+  req.end();
+});
 
 // ─── POST /upload ─────────────────────────────────────────────────────────
 router.post('/', authenticate, upload.array('images', 6), async (req, res) => {
