@@ -1,317 +1,434 @@
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/models.dart';
 
-// ─── ألوان الفاتورة ─────────────────────────────────────────────────────────
-const _cDark   = PdfColor.fromInt(0xFF1A1A2E);
-const _cGold   = PdfColor.fromInt(0xFFB8963E);
-const _cBg     = PdfColor.fromInt(0xFFF8F5EE);
-const _cWhite  = PdfColors.white;
-const _cGrey   = PdfColor.fromInt(0xFF8E8E93);
-const _cBorder = PdfColor.fromInt(0xFFE8E0D0);
+const _kDark   = Color(0xFF1A1A2E);
+const _kDeep   = Color(0xFF16213E);
+const _kGold   = Color(0xFFB8963E);
+const _kGoldLt = Color(0xFFD4A853);
+const _kBg     = Color(0xFFF8F5EE);
+const _kGrey   = Color(0xFF8E8E93);
+const _kBorder = Color(0xFFE8E0D0);
 
 class InvoiceService {
   static InvoiceService get instance => _i;
   static final _i = InvoiceService._();
   InvoiceService._();
 
-  // ─── توليد PDF ─────────────────────────────────────────────────────────────
-  Future<Uint8List> buildBytes(Order order) async {
-    final doc      = pw.Document();
-    final font     = await PdfGoogleFonts.cairoRegular();
-    final fontBold = await PdfGoogleFonts.cairoBold();
-    final now      = DateTime.now();
-    final dateStr  = '${now.day}/${now.month}/${now.year}';
-
-    doc.addPage(pw.Page(
-      pageFormat: PdfPageFormat.a4,
-      margin: pw.EdgeInsets.zero,
-      build: (ctx) => pw.Directionality(
-        textDirection: pw.TextDirection.rtl,
-        child: pw.Column(children: [
-          _buildHeader('مسابيح لايقر', font, fontBold),
-          pw.Padding(
-            padding: pw.EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                _infoBox('معلومات الفاتورة', [
-                  'رقم: ${order.orderNumber}',
-                  'التاريخ: $dateStr',
-                  'الحالة: ${order.statusDisplay}',
-                ], font, fontBold),
-                _infoBox('معلومات العميل', [
-                  order.buyerName ?? 'عميل',
-                  if ((order.buyerPhone ?? '').isNotEmpty) order.buyerPhone!,
-                  if ((order.deliveryAddress ?? '').isNotEmpty) order.deliveryAddress!,
-                ], font, fontBold),
-              ],
-            ),
-          ),
-          pw.Padding(
-            padding: pw.EdgeInsets.symmetric(horizontal: 32),
-            child: _itemsTable(order, font, fontBold),
-          ),
-          pw.SizedBox(height: 16),
-          pw.Padding(
-            padding: pw.EdgeInsets.symmetric(horizontal: 32),
-            child: _totals(order, font, fontBold),
-          ),
-          if ((order.notes ?? '').isNotEmpty)
-            pw.Padding(
-              padding: pw.EdgeInsets.fromLTRB(32, 16, 32, 0),
-              child: _notesBox(order.notes!, font),
-            ),
-          pw.Spacer(),
-          _buildFooter('مسابيح لايقر', font),
-        ]),
-      ),
-    ));
-
-    return doc.save();
-  }
-
-  // ─── هيدر ─────────────────────────────────────────────────────────────────
-  pw.Widget _buildHeader(String store, pw.Font font, pw.Font bold) =>
-    pw.Container(
-      width: double.infinity,
-      padding: pw.EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-      decoration: pw.BoxDecoration(color: _cDark),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            pw.Text('INVOICE / فاتورة',
-              style: pw.TextStyle(font: font, color: _cGold, fontSize: 11)),
-            pw.SizedBox(height: 4),
-            pw.Text(store,
-              style: pw.TextStyle(font: bold, color: _cWhite, fontSize: 22)),
-          ]),
-          pw.Container(
-            width: 56, height: 56,
-            decoration: pw.BoxDecoration(
-              color: _cGold,
-              borderRadius: pw.BorderRadius.circular(12)),
-            child: pw.Center(
-              child: pw.Text('📿',
-                style: pw.TextStyle(font: font, fontSize: 26)))),
-        ],
-      ),
-    );
-
-  // ─── صندوق المعلومات ───────────────────────────────────────────────────────
-  pw.Widget _infoBox(String title, List<String> lines, pw.Font font, pw.Font bold) =>
-    pw.Container(
-      padding: pw.EdgeInsets.all(14),
-      decoration: pw.BoxDecoration(
-        color: _cBg,
-        borderRadius: pw.BorderRadius.circular(10),
-        border: pw.Border.all(color: _cBorder, width: 0.5)),
-      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-        pw.Text(title,
-          style: pw.TextStyle(font: bold, fontSize: 10, color: _cGold)),
-        pw.Divider(color: _cBorder, height: 8),
-        ...lines.where((l) => l.isNotEmpty).map((l) => pw.Padding(
-          padding: pw.EdgeInsets.only(bottom: 2),
-          child: pw.Text(l,
-            style: pw.TextStyle(font: font, fontSize: 10, color: _cDark)))),
-      ]),
-    );
-
-  // ─── جدول المنتجات ────────────────────────────────────────────────────────
-  pw.Widget _itemsTable(Order order, pw.Font font, pw.Font bold) {
-    final rows = order.isCartOrder && order.items.isNotEmpty
-      ? order.items.map((i) => [
-          '${i.totalPrice.toStringAsFixed(3)} د.ك',
-          '${i.unitPrice.toStringAsFixed(3)} د.ك',
-          '${i.quantity}',
-          '${i.productEmoji} ${i.productName}',
-        ]).toList()
-      : [[
-          '${order.totalPrice.toStringAsFixed(3)} د.ك',
-          '${order.totalPrice.toStringAsFixed(3)} د.ك',
-          '1',
-          '${order.productEmoji ?? '📿'} ${order.productName ?? 'منتج'}',
-        ]];
-
-    return pw.Table(
-      border: pw.TableBorder.all(color: _cBorder, width: 0.5),
-      columnWidths: {
-        0: const pw.FlexColumnWidth(2),
-        1: const pw.FlexColumnWidth(2),
-        2: const pw.FlexColumnWidth(1),
-        3: const pw.FlexColumnWidth(4),
-      },
-      children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: _cDark),
-          children: ['الإجمالي','السعر','الكمية','المنتج'].map((h) =>
-            pw.Padding(
-              padding: pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: pw.Text(h, textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(font: bold, fontSize: 10, color: _cWhite)))).toList()),
-        ...rows.asMap().entries.map((e) => pw.TableRow(
-          decoration: pw.BoxDecoration(
-            color: e.key % 2 == 0 ? _cWhite : _cBg),
-          children: e.value.map((c) =>
-            pw.Padding(
-              padding: pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: pw.Text(c, textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(font: font, fontSize: 10, color: _cDark)))).toList())),
-      ],
-    );
-  }
-
-  // ─── الإجمالي ─────────────────────────────────────────────────────────────
-  pw.Widget _totals(Order order, pw.Font font, pw.Font bold) =>
-    pw.Row(mainAxisAlignment: pw.MainAxisAlignment.end, children: [
-      pw.Container(
-        width: 220,
-        decoration: pw.BoxDecoration(
-          color: _cBg,
-          borderRadius: pw.BorderRadius.circular(10),
-          border: pw.Border.all(color: _cBorder, width: 0.5)),
-        child: pw.Column(children: [
-          pw.Container(
-            padding: pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: pw.BoxDecoration(color: _cDark),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('${order.totalPrice.toStringAsFixed(3)} د.ك',
-                  style: pw.TextStyle(font: bold, fontSize: 14, color: _cGold)),
-                pw.Text('الإجمالي الكلي',
-                  style: pw.TextStyle(font: bold, fontSize: 11, color: _cWhite)),
-              ]),
-          ),
-        ]),
-      ),
-    ]);
-
-  // ─── ملاحظات ──────────────────────────────────────────────────────────────
-  pw.Widget _notesBox(String notes, pw.Font font) =>
-    pw.Container(
-      width: double.infinity,
-      padding: pw.EdgeInsets.all(12),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: _cGold, width: 0.8),
-        borderRadius: pw.BorderRadius.circular(8)),
-      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-        pw.Text('ملاحظات',
-          style: pw.TextStyle(font: font, fontSize: 9, color: _cGold)),
-        pw.SizedBox(height: 4),
-        pw.Text(notes,
-          style: pw.TextStyle(font: font, fontSize: 10, color: _cDark)),
-      ]),
-    );
-
-  // ─── فوتر ─────────────────────────────────────────────────────────────────
-  pw.Widget _buildFooter(String store, pw.Font font) =>
-    pw.Container(
-      width: double.infinity,
-      padding: pw.EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-      decoration: pw.BoxDecoration(
-        border: pw.Border(top: pw.BorderSide(color: _cGold, width: 1))),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text('شكراً لتسوقكم معنا',
-            style: pw.TextStyle(font: font, fontSize: 9, color: _cGrey)),
-          pw.Text(store,
-            style: pw.TextStyle(font: font, fontSize: 9, color: _cDark)),
-        ],
-      ),
-    );
-
-  // ─── معاينة داخل التطبيق ─────────────────────────────────────────────────
   Future<void> previewInvoice(Order order, BuildContext context) async {
-    try {
-      final bytes = await buildBytes(order);
-      if (!context.mounted) return;
-      await Navigator.push(context, MaterialPageRoute(
-        builder: (_) => _InvoicePreviewScreen(
-          orderNumber: order.orderNumber,
-          bytes: bytes,
-          order: order,
-        ),
-      ));
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('فشل إنشاء الفاتورة: $e',
-            style: const TextStyle(fontFamily: 'Tajawal')),
-          backgroundColor: Colors.red));
-      }
-    }
+    if (!context.mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => InvoicePreviewScreen(order: order)),
+    );
   }
 
-  // ─── مشاركة ───────────────────────────────────────────────────────────────
-  Future<void> shareInvoice(Order order, BuildContext context) async {
-    try {
-      final bytes = await buildBytes(order);
-      final dir   = await getTemporaryDirectory();
-      final file  = File('${dir.path}/invoice_${order.orderNumber}.pdf');
-      await file.writeAsBytes(bytes);
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'application/pdf')],
-        subject: 'فاتورة ${order.orderNumber} — مسابيح لايقر',
-      );
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('فشل مشاركة الفاتورة: $e',
-            style: const TextStyle(fontFamily: 'Tajawal')),
-          backgroundColor: Colors.red));
+  Future<void> shareInvoice(Order order) async {
+    final text = _buildText(order);
+    await Share.share(text, subject: 'فاتورة ${order.orderNumber} — مسابيح لايقر');
+  }
+
+  String _buildText(Order order) {
+    final now = DateTime.now();
+    final dateStr = '${now.day}/${now.month}/${now.year}';
+    final buf = StringBuffer();
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('📿  مسابيح لايقر  📿');
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('رقم الطلب: ${order.orderNumber}');
+    buf.writeln('التاريخ: $dateStr');
+    buf.writeln('الحالة: ${order.statusDisplay}');
+    buf.writeln('');
+    if ((order.buyerName ?? '').isNotEmpty) buf.writeln('العميل: ${order.buyerName}');
+    if ((order.buyerPhone ?? '').isNotEmpty) buf.writeln('الهاتف: ${order.buyerPhone}');
+    if ((order.deliveryAddress ?? '').isNotEmpty) buf.writeln('العنوان: ${order.deliveryAddress}');
+    buf.writeln('');
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('المنتجات:');
+    if (order.isCartOrder && order.items.isNotEmpty) {
+      for (final item in order.items) {
+        buf.writeln('  ${item.productEmoji} ${item.productName}');
+        buf.writeln('  الكمية: ${item.quantity} x ${item.unitPrice.toStringAsFixed(3)} = ${item.totalPrice.toStringAsFixed(3)} KD');
       }
+    } else {
+      final emoji = order.productEmoji ?? '📿';
+      final name  = order.productName ?? 'منتج';
+      buf.writeln('  $emoji $name');
     }
+    buf.writeln('');
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('الإجمالي: ${order.totalPrice.toStringAsFixed(3)} KD');
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━');
+    if ((order.notes ?? '').isNotEmpty) buf.writeln('ملاحظات: ${order.notes}');
+    buf.writeln('');
+    buf.writeln('شكراً لتسوقكم معنا');
+    return buf.toString();
   }
 }
 
 // ─── شاشة المعاينة ────────────────────────────────────────────────────────
-class _InvoicePreviewScreen extends StatelessWidget {
-  final String orderNumber;
-  final Uint8List bytes;
+class InvoicePreviewScreen extends StatelessWidget {
   final Order order;
-  const _InvoicePreviewScreen({
-    required this.orderNumber,
-    required this.bytes,
-    required this.order,
-  });
+  const InvoicePreviewScreen({super.key, required this.order});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFF1A1A2E),
-    appBar: AppBar(
-      backgroundColor: const Color(0xFF1A1A2E),
-      foregroundColor: Colors.white,
-      title: Text('فاتورة $orderNumber',
-        style: const TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700)),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.share, color: Color(0xFFB8963E)),
-          onPressed: () => InvoiceService.instance.shareInvoice(order, context),
-          tooltip: 'مشاركة',
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _kDark,
+      appBar: AppBar(
+        backgroundColor: _kDeep,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'الفاتورة',
+          style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700),
         ),
-        IconButton(
-          icon: const Icon(Icons.print_outlined, color: Color(0xFFB8963E)),
-          onPressed: () => Printing.layoutPdf(onLayout: (_) async => bytes),
-          tooltip: 'طباعة',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined, color: _kGold),
+            tooltip: 'مشاركة',
+            onPressed: () => InvoiceService.instance.shareInvoice(order),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: _InvoiceCard(order: order),
+      ),
+    );
+  }
+}
+
+// ─── بطاقة الفاتورة ───────────────────────────────────────────────────────
+class _InvoiceCard extends StatelessWidget {
+  final Order order;
+  const _InvoiceCard({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    final now     = DateTime.now();
+    final dateStr = '${now.day}/${now.month}/${now.year}';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: _kBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildHeader(),
+          _buildMeta(dateStr),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildTable(),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildTotal(),
+          ),
+          if ((order.notes ?? '').isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _buildNotes(),
+            ),
+          ],
+          const SizedBox(height: 20),
+          _buildFooter(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_kDark, _kDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54, height: 54,
+            decoration: BoxDecoration(
+              color: _kGold,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: _kGold.withOpacity(0.4),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Center(child: Text('📿', style: TextStyle(fontSize: 26))),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('INVOICE / فاتورة',
+                  style: TextStyle(
+                    fontFamily: 'Tajawal', fontSize: 11,
+                    color: _kGold, letterSpacing: 1.2)),
+                SizedBox(height: 4),
+                Text('مسابيح لايقر',
+                  style: TextStyle(
+                    fontFamily: 'Tajawal', fontSize: 22,
+                    fontWeight: FontWeight.w900, color: Colors.white)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMeta(String dateStr) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: _infoBox('معلومات الفاتورة', [
+            _row('رقم',   order.orderNumber),
+            _row('تاريخ', dateStr),
+            _row('حالة',  order.statusDisplay),
+          ])),
+          const SizedBox(width: 12),
+          Expanded(child: _infoBox('بيانات العميل', [
+            if ((order.buyerName ?? '').isNotEmpty)
+              _row('الاسم',   order.buyerName!),
+            if ((order.buyerPhone ?? '').isNotEmpty)
+              _row('الهاتف',  order.buyerPhone!),
+            if ((order.deliveryAddress ?? '').isNotEmpty)
+              _row('العنوان', order.deliveryAddress!),
+          ])),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoBox(String title, List<Widget> rows) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(title,
+            style: const TextStyle(
+              fontFamily: 'Tajawal', fontSize: 11,
+              fontWeight: FontWeight.w700, color: _kGold)),
+          const Divider(color: _kBorder, height: 12),
+          ...rows,
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text(value,
+              style: const TextStyle(fontFamily: 'Tajawal', fontSize: 10, color: _kDark),
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis)),
+          const SizedBox(width: 4),
+          Text(label,
+            style: const TextStyle(fontFamily: 'Tajawal', fontSize: 10, color: _kGrey)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTable() {
+    final List<List<String>> rows;
+    if (order.isCartOrder && order.items.isNotEmpty) {
+      rows = order.items.map((i) => [
+        i.totalPrice.toStringAsFixed(3),
+        i.unitPrice.toStringAsFixed(3),
+        '${i.quantity}',
+        '${i.productEmoji} ${i.productName}',
+      ]).toList();
+    } else {
+      rows = [[
+        order.totalPrice.toStringAsFixed(3),
+        order.totalPrice.toStringAsFixed(3),
+        '1',
+        '${order.productEmoji ?? "📿"} ${order.productName ?? "منتج"}',
+      ]];
+    }
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: const BoxDecoration(
+            color: _kDark,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+          ),
+          child: Row(
+            children: [
+              _th('الإجمالي', 2),
+              _th('السعر',    2),
+              _th('الكمية',   1),
+              _th('المنتج',   4),
+            ],
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: _kBorder),
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
+          ),
+          child: Column(
+            children: rows.asMap().entries.map((e) {
+              final even = e.key % 2 == 0;
+              final r    = e.value;
+              return Container(
+                color: even ? Colors.white : const Color(0xFFF8F5EE),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    _td(r[0], 2, bold: true),
+                    _td(r[1], 2),
+                    _td(r[2], 1),
+                    _td(r[3], 4, align: TextAlign.end),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
         ),
       ],
-    ),
-    body: PdfPreview(
-      build: (_) async => bytes,
-      allowPrinting: false,
-      allowSharing: false,
-      canChangeOrientation: false,
-      canChangePageFormat: false,
-      pdfFileName: 'invoice_$orderNumber.pdf',
-    ),
+    );
+  }
+
+  Widget _th(String text, int flex) => Expanded(
+    flex: flex,
+    child: Text(text,
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontFamily: 'Tajawal', fontSize: 11,
+        fontWeight: FontWeight.w700, color: Colors.white)),
   );
+
+  Widget _td(String text, int flex, {bool bold = false, TextAlign align = TextAlign.center}) =>
+    Expanded(
+      flex: flex,
+      child: Text(text,
+        textAlign: align,
+        style: TextStyle(
+          fontFamily: 'Tajawal', fontSize: 11,
+          fontWeight: bold ? FontWeight.w700 : FontWeight.normal,
+          color: _kDark)),
+    );
+
+  Widget _buildTotal() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: 220,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_kDark, _kDeep],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: _kDark.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${order.totalPrice.toStringAsFixed(3)} KD',
+              style: const TextStyle(
+                fontFamily: 'Tajawal', fontSize: 16,
+                fontWeight: FontWeight.w900, color: _kGoldLt)),
+            const Text('الإجمالي الكلي',
+              style: TextStyle(
+                fontFamily: 'Tajawal', fontSize: 12,
+                fontWeight: FontWeight.w700, color: Colors.white)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotes() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border.all(color: _kGold),
+        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFFFFF8E8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const Text('ملاحظات',
+            style: TextStyle(fontFamily: 'Tajawal', fontSize: 10,
+              fontWeight: FontWeight.w700, color: _kGold)),
+          const SizedBox(height: 6),
+          Text(order.notes!,
+            textAlign: TextAlign.end,
+            style: const TextStyle(fontFamily: 'Tajawal', fontSize: 12, color: _kDark)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: _kBorder)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('شكراً لتسوقكم معنا 🙏',
+            style: TextStyle(fontFamily: 'Tajawal', fontSize: 11, color: _kGrey)),
+          Text('مسابيح لايقر',
+            style: TextStyle(fontFamily: 'Tajawal', fontSize: 11,
+              fontWeight: FontWeight.w700, color: _kDark)),
+        ],
+      ),
+    );
+  }
 }
