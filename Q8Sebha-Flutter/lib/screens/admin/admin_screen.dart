@@ -155,6 +155,8 @@ class _ProductsTabState extends State<_ProductsTab> {
       setState(() { _products = r.map((p) => {
         'id': p.id, 'name': p.name, 'price': p.price,
         'emoji': p.emoji, 'image_urls': p.imageUrls,
+        'description': p.description, 'stock': p.stock,
+        'category_id': p.categoryId,
       }).toList(); _loading = false; });
     } catch (_) { setState(() => _loading = false); }
   }
@@ -208,10 +210,20 @@ class _ProductsTabState extends State<_ProductsTab> {
                     ),
                     title: Text(p['name']??'', textAlign:TextAlign.right, style:AppText.heading3.copyWith(fontSize:14)),
                     subtitle: Text('${p['price']} د.ك', textAlign:TextAlign.right, style:AppText.price.copyWith(fontSize:13)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color:Colors.red),
-                      onPressed: ()=>_delete(p['id'] as int),
-                    ),
+                    trailing: Row(mainAxisSize:MainAxisSize.min, children:[
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, color:AppTheme.primary),
+                        onPressed: () async {
+                          final edited = await Navigator.push<bool>(context,
+                              MaterialPageRoute(builder:(_)=>_EditProductScreen(product:p)));
+                          if (edited==true) _load();
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color:Colors.red),
+                        onPressed: ()=>_delete(p['id'] as int),
+                      ),
+                    ]),
                   ),
                 );
               },
@@ -390,6 +402,221 @@ class _AddProductScreenState extends State<_AddProductScreen> {
         if (_error!=null) ...[const SizedBox(height:10), ErrorBanner(_error!)],
         const SizedBox(height:20),
         Q8Button(label:'إضافة المنتج', isLoading:_loading, onTap:_submit),
+        const SizedBox(height:30),
+      ]),
+    ),
+  );
+}
+
+// ─── شاشة تعديل منتج ─────────────────────────────────────────────────────
+class _EditProductScreen extends StatefulWidget {
+  final Map<String,dynamic> product;
+  const _EditProductScreen({required this.product});
+  @override State<_EditProductScreen> createState() => _EditProductScreenState();
+}
+class _EditProductScreenState extends State<_EditProductScreen> {
+  late final TextEditingController _name;
+  late final TextEditingController _price;
+  late final TextEditingController _desc;
+  late final TextEditingController _stock;
+  late String _emoji;
+  String? _categoryId;
+  List<XFile> _newImages = [];
+  List<String> _existingUrls = [];
+  bool _loading = false;
+  String? _error;
+  List<dynamic> _categories = [];
+
+  static const _emojis = ['📿','💎','💍','🏺','🪬','🔮','🌙','⭐','🌟','🪩'];
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.product;
+    _name  = TextEditingController(text: p['name'] ?? '');
+    _price = TextEditingController(text: '${p['price'] ?? ''}');
+    _desc  = TextEditingController(text: p['description'] ?? '');
+    _stock = TextEditingController(text: '${p['stock'] ?? 1}');
+    _emoji = p['emoji'] ?? '📿';
+    _existingUrls = List<String>.from(p['image_urls'] ?? []);
+    _loadCats();
+  }
+
+  @override void dispose() {
+    _name.dispose(); _price.dispose(); _desc.dispose(); _stock.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCats() async {
+    try {
+      final r = await APIService.instance.adminCategories();
+      final cats = r['data'] ?? [];
+      setState(() {
+        _categories = cats;
+        // حاول تحديد التصنيف الحالي
+        final catId = widget.product['category_id'];
+        if (catId != null) _categoryId = catId.toString();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _pickImages() async {
+    final picked = await ImagePicker().pickMultiImage(imageQuality:80);
+    if (picked.isNotEmpty) setState(() => _newImages = picked.take(6).toList());
+  }
+
+  Future<void> _submit() async {
+    if (_name.text.isEmpty || _price.text.isEmpty) {
+      setState(() => _error = 'أدخل الاسم والسعر'); return;
+    }
+    setState(() { _loading=true; _error=null; });
+    try {
+      // رفع الصور الجديدة إن وُجدت
+      List<String> urls = List.from(_existingUrls);
+      if (_newImages.isNotEmpty) {
+        try {
+          final uploaded = await APIService.instance.uploadImages(_newImages);
+          urls = [...urls, ...uploaded];
+        } catch (_) {}
+      }
+      await APIService.instance.adminUpdateProduct(widget.product['id'] as int, {
+        'name': _name.text,
+        'price': double.tryParse(_price.text) ?? 0,
+        'description': _desc.text,
+        'emoji': _emoji,
+        'stock': int.tryParse(_stock.text) ?? 1,
+        if (_categoryId != null) 'category_id': int.parse(_categoryId!),
+        'image_urls': urls,
+      });
+      if (mounted) Navigator.pop(context, true);
+    } catch(e) { setState(() { _error = e.toString(); _loading = false; }); }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title:const Text('تعديل المنتج')),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(crossAxisAlignment:CrossAxisAlignment.end, children:[
+        // إيموجي
+        const Text('الإيموجي', style:TextStyle(fontFamily:'Tajawal', fontWeight:FontWeight.w700, fontSize:14)),
+        const SizedBox(height:8),
+        SizedBox(height:50, child:ListView(scrollDirection:Axis.horizontal, children:_emojis.map((e)=>
+          GestureDetector(
+            onTap:()=>setState(()=>_emoji=e),
+            child:AnimatedContainer(duration:const Duration(milliseconds:200),
+              margin:const EdgeInsets.only(left:8), width:44, height:44,
+              decoration:BoxDecoration(
+                color:_emoji==e?AppTheme.primary:Colors.grey.shade100,
+                borderRadius:BorderRadius.circular(12)),
+              child:Center(child:Text(e,style:const TextStyle(fontSize:22)))),
+          )).toList())),
+        const SizedBox(height:16),
+        Q8Field(hint:'اسم المنتج', controller:_name, icon:Icons.label),
+        const SizedBox(height:12),
+        TextField(
+          controller: _price,
+          keyboardType: const TextInputType.numberWithOptions(decimal:true),
+          textAlign: TextAlign.right,
+          style: const TextStyle(fontFamily:'Tajawal', fontSize:14),
+          decoration: InputDecoration(
+            hintText: 'السعر',
+            hintTextDirection: TextDirection.rtl,
+            filled: true, fillColor: const Color(0xFFF0F0EB),
+            border: OutlineInputBorder(borderRadius:BorderRadius.circular(14), borderSide:BorderSide.none),
+            contentPadding: const EdgeInsets.symmetric(horizontal:16, vertical:15),
+            prefixIcon: const Icon(Icons.payments_outlined, color:AppTheme.primary, size:20),
+            suffixText: 'د.ك',
+            suffixStyle: const TextStyle(fontFamily:'Tajawal', fontWeight:FontWeight.w700, color:AppTheme.primary, fontSize:14),
+          ),
+        ),
+        const SizedBox(height:12),
+        Q8Field(hint:'الكمية المتاحة', controller:_stock, icon:Icons.inventory, keyboard:TextInputType.number),
+        const SizedBox(height:12),
+        if (_categories.isNotEmpty) ...[
+          DropdownButtonFormField<String>(
+            value: _categoryId,
+            decoration: InputDecoration(filled:true, fillColor:const Color(0xFFF0F0EB),
+              border:OutlineInputBorder(borderRadius:BorderRadius.circular(14), borderSide:BorderSide.none),
+              contentPadding:const EdgeInsets.symmetric(horizontal:16, vertical:15)),
+            hint: const Text('اختر التصنيف', style:TextStyle(fontFamily:'Tajawal', fontSize:14)),
+            items: _categories.map<DropdownMenuItem<String>>((c)=>DropdownMenuItem(
+              value:c['id'].toString(),
+              child:Text(c['name'] ?? '', style:const TextStyle(fontFamily:'Tajawal', fontSize:14)),
+            )).toList(),
+            onChanged:(v)=>setState(()=>_categoryId=v),
+          ),
+          const SizedBox(height:12),
+        ],
+        TextField(controller:_desc, textAlign:TextAlign.right, maxLines:3,
+          style:const TextStyle(fontFamily:'Tajawal', fontSize:14),
+          decoration:InputDecoration(hintText:'وصف المنتج...', hintTextDirection:TextDirection.rtl,
+            filled:true, fillColor:const Color(0xFFF0F0EB),
+            border:OutlineInputBorder(borderRadius:BorderRadius.circular(14), borderSide:BorderSide.none),
+            contentPadding:const EdgeInsets.all(16),
+            prefixIcon:const Icon(Icons.description, color:AppTheme.primary, size:20))),
+        const SizedBox(height:16),
+        // الصور الحالية
+        if (_existingUrls.isNotEmpty) ...[
+          Row(mainAxisAlignment:MainAxisAlignment.spaceBetween, children:[
+            TextButton.icon(
+              onPressed:()=>setState(()=>_existingUrls.clear()),
+              icon:const Icon(Icons.delete_sweep, color:Colors.red, size:18),
+              label:const Text('حذف الكل', style:TextStyle(color:Colors.red, fontFamily:'Tajawal', fontSize:13)),
+            ),
+            const Text('الصور الحالية', style:TextStyle(fontFamily:'Tajawal', fontWeight:FontWeight.w600, fontSize:14)),
+          ]),
+          const SizedBox(height:8),
+          SizedBox(height:80, child:ListView.builder(
+            scrollDirection:Axis.horizontal, itemCount:_existingUrls.length,
+            itemBuilder:(_, i)=>Stack(children:[
+              Container(width:80, height:80, margin:const EdgeInsets.only(left:8),
+                child:ClipRRect(borderRadius:BorderRadius.circular(10),
+                  child:Image.network(AppConfig.imageUrl(_existingUrls[i]), fit:BoxFit.cover,
+                    errorBuilder:(_,__,___)=>Container(color:const Color(0xFFF0EDE8),
+                      child:const Icon(Icons.broken_image, color:Colors.grey))))),
+              Positioned(top:2, right:2,
+                child:GestureDetector(
+                  onTap:()=>setState(()=>_existingUrls.removeAt(i)),
+                  child:Container(padding:const EdgeInsets.all(2),
+                    decoration:const BoxDecoration(color:Colors.red, shape:BoxShape.circle),
+                    child:const Icon(Icons.close, size:12, color:Colors.white)))),
+            ]))),
+          const SizedBox(height:12),
+        ],
+        // إضافة صور جديدة
+        GestureDetector(
+          onTap: _pickImages,
+          child:Container(width:double.infinity, padding:const EdgeInsets.symmetric(vertical:16),
+            decoration:BoxDecoration(color:AppTheme.primary.withOpacity(0.05),
+              borderRadius:BorderRadius.circular(14),
+              border:Border.all(color:AppTheme.primary.withOpacity(0.3))),
+            child:Column(children:[
+              const Icon(Icons.add_photo_alternate_outlined, color:AppTheme.primary, size:32),
+              const SizedBox(height:6),
+              Text(_newImages.isEmpty?'إضافة صور جديدة':'${_newImages.length} صورة محددة',
+                style:const TextStyle(fontFamily:'Tajawal', fontWeight:FontWeight.w600, fontSize:14, color:AppTheme.primary)),
+            ])),
+        ),
+        if (_newImages.isNotEmpty) ...[
+          const SizedBox(height:10),
+          SizedBox(height:80, child:ListView.builder(
+            scrollDirection:Axis.horizontal, itemCount:_newImages.length,
+            itemBuilder:(_, i)=>Stack(children:[
+              Container(width:80, height:80, margin:const EdgeInsets.only(left:8),
+                child:ClipRRect(borderRadius:BorderRadius.circular(10),
+                  child:Image.file(File(_newImages[i].path), fit:BoxFit.cover))),
+              Positioned(top:2, right:2,
+                child:GestureDetector(
+                  onTap:()=>setState(()=>_newImages.removeAt(i)),
+                  child:Container(padding:const EdgeInsets.all(2),
+                    decoration:const BoxDecoration(color:Colors.red, shape:BoxShape.circle),
+                    child:const Icon(Icons.close, size:12, color:Colors.white)))),
+            ]))),
+        ],
+        if (_error!=null) ...[const SizedBox(height:10), ErrorBanner(_error!)],
+        const SizedBox(height:20),
+        Q8Button(label:'حفظ التعديلات', isLoading:_loading, onTap:_submit),
         const SizedBox(height:30),
       ]),
     ),

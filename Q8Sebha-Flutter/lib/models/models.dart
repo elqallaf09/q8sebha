@@ -67,6 +67,7 @@ class Product {
   final int id;
   String name;
   String? description, categoryName, material, originCountry, badge;
+  int? categoryId;
   double price;
   int stock, viewsCount, salesCount;
   int? beadCount;
@@ -76,7 +77,7 @@ class Product {
   bool isAvailable;
 
   Product({required this.id, required this.name, required this.price,
-           this.description, this.categoryName, this.material, this.badge,
+           this.description, this.categoryName, this.categoryId, this.material, this.badge,
            this.originCountry, this.beadCount, this.beadSizeMm, this.weightGrams,
            this.emoji = '📿', this.imageUrls = const [], this.isAvailable = true,
            this.stock = 1, this.viewsCount = 0, this.salesCount = 0});
@@ -94,6 +95,7 @@ class Product {
       id: j['id'], name: j['name'],
       price: double.tryParse(j['price'].toString()) ?? 0.0,
       description: j['description'], categoryName: j['category_name'],
+      categoryId: j['category_id'] as int?,
       material: j['material'], badge: j['badge'],
       originCountry: j['origin_country'],
       beadCount:  j['bead_count'],

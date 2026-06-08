@@ -56,8 +56,11 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
 });
 
 router.put('/:id', authenticate, adminOnly, async (req, res) => {
-  const allowed = ['name','description','price','stock','is_available','badge','material','weight_grams','bead_count'];
+  const allowed = ['name','description','price','stock','is_available','badge','material',
+                   'weight_grams','bead_count','emoji','category_id'];
   const fields = {}; allowed.forEach(f => { if (req.body[f]!==undefined) fields[f]=req.body[f]; });
+  // image_urls handled separately (JSON array)
+  if (req.body.image_urls !== undefined) fields['image_urls'] = JSON.stringify(req.body.image_urls);
   if (!Object.keys(fields).length) return res.status(400).json({ success: false, message: 'لا بيانات للتحديث' });
   const sets = Object.keys(fields).map((k,i)=>`${k}=$${i+1}`).join(', ');
   const vals = [...Object.values(fields), req.params.id];
