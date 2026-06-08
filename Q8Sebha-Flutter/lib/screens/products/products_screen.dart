@@ -536,6 +536,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                     curve: Curves.easeOutCubic,
                     margin: const EdgeInsets.only(left: 10),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    alignment: Alignment.center,
                     decoration: BoxDecoration(
                       gradient: isSelected ? LinearGradient(
                         colors: [catColor, catColor.withOpacity(0.8)],
@@ -603,7 +604,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: SizedBox(
-                    height: 36,
+                    height: 38,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -618,12 +619,12 @@ class _ProductsScreenState extends State<ProductsScreen>
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? Colors.white
                                   : Colors.white.withOpacity(0.13),
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(19),
                               border: Border.all(
                                 color: isSelected
                                     ? Colors.white
@@ -636,15 +637,17 @@ class _ProductsScreenState extends State<ProductsScreen>
                                   blurRadius: 10, spreadRadius: 1),
                               ] : [],
                             ),
-                            child: Text(name,
-                              style: TextStyle(
-                                fontFamily: 'Tajawal',
-                                fontSize: 12,
-                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                                color: isSelected
-                                    ? parentColor
-                                    : Colors.white.withOpacity(0.92),
-                              )),
+                            child: Center(
+                              child: Text(name,
+                                style: TextStyle(
+                                  fontFamily: 'Tajawal',
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                  color: isSelected
+                                      ? parentColor
+                                      : Colors.white.withOpacity(0.92),
+                                )),
+                            ),
                           ),
                         );
                       },

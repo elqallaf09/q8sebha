@@ -97,7 +97,16 @@ class _LoginScreenState extends State<LoginScreen> {
       _rememberMe = true;
       _phoneMode  = phoneMode;
       if (phoneMode) {
-        _phone.text = savedId;
+        // احذف رمز الدولة إذا كان محفوظاً مع الرقم
+        String phoneNum = savedId;
+        for (final c in _countries) {
+          if (phoneNum.startsWith(c.code)) {
+            phoneNum = phoneNum.substring(c.code.length);
+            _country = c;
+            break;
+          }
+        }
+        _phone.text = phoneNum;
       } else {
         _identifier.text = savedId;
       }
@@ -108,8 +117,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _saveRemembered(String identifier, String password) async {
     final prefs = await SharedPreferences.getInstance();
     if (_rememberMe) {
+      // في وضع الهاتف: نحفظ الرقم فقط بدون رمز الدولة
+      final savedId = _phoneMode ? _phone.text.trim() : identifier;
       await prefs.setBool  (_kRemember,  true);
-      await prefs.setString(_kSavedId,   identifier);
+      await prefs.setString(_kSavedId,   savedId);
       await prefs.setString(_kSavedPass, password);
       await prefs.setBool  (_kPhoneMode, _phoneMode);
     } else {
