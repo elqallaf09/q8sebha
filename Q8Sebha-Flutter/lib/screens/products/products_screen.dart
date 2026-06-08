@@ -876,4 +876,174 @@ class _ProductCardState extends State<_ProductCard>
                         ),
                       ),
 
-                    // زر المفضلة
+                    // زر المفضلة + مشاركة
+                    Positioned(
+                      top: 8, left: 8,
+                      child: Column(children: [
+                        GestureDetector(
+                          onTap: _toggleFav,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 30, height: 30,
+                            decoration: BoxDecoration(
+                              color: _liked
+                                  ? Colors.red.shade400
+                                  : Colors.black.withOpacity(0.25),
+                              shape: BoxShape.circle,
+                            ),
+                            child: _favLoading
+                                ? const SizedBox(width: 14, height: 14,
+                                    child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white))
+                                : Icon(_liked ? Icons.favorite : Icons.favorite_border,
+                                    color: Colors.white, size: 14),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        GestureDetector(
+                          onTap: _shareProduct,
+                          child: Container(
+                            width: 30, height: 30,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.25),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.share_rounded,
+                                color: Colors.white, size: 14),
+                          ),
+                        ),
+                      ]),
+                    ),
+
+                    // السعر فوق الصورة
+                    Positioned(
+                      bottom: 8, right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.55),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: AppTheme.gold.withOpacity(0.5), width: 0.8),
+                        ),
+                        child: Text(
+                          '${p.price.toStringAsFixed(p.price % 1 == 0 ? 0 : 3)} د.ك',
+                          style: const TextStyle(
+                            fontFamily: 'Tajawal', fontWeight: FontWeight.w800,
+                            fontSize: 12, color: AppTheme.goldLight,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+
+              // ─── معلومات ────────────────────────────────────────────────
+              Expanded(
+                flex: 6,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // الاسم
+                      Text(p.name,
+                        textAlign: TextAlign.right,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
+                          fontSize: 13, color: AppTheme.textDark,
+                          height: 1.3,
+                        )),
+
+                      // صف الزر والمخزون
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // زر إضافة للسلة
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.mediumImpact();
+                              Navigator.push(context,
+                                MaterialPageRoute(builder: (_) =>
+                                    ProductDetailScreen(productId: p.id)));
+                            },
+                            child: Container(
+                              width: 34, height: 34,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF1A1A2E), Color(0xFF2D2D50)],
+                                ),
+                                borderRadius: BorderRadius.circular(11),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF1A1A2E).withOpacity(0.3),
+                                    blurRadius: 6, offset: const Offset(0, 2)),
+                                ],
+                              ),
+                              child: const Icon(Icons.arrow_forward_ios_rounded,
+                                  color: Colors.white, size: 14),
+                            ),
+                          ),
+
+                          // مخزون
+                          if (p.stock <= 3 && p.stock > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text('${p.stock} فقط',
+                                style: TextStyle(
+                                  fontFamily: 'Tajawal', fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.orange.shade700,
+                                )),
+                            )
+                          else if (p.stock == 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text('نفد',
+                                style: TextStyle(
+                                  fontFamily: 'Tajawal', fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.red.shade400,
+                                )),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [const Color(0xFFEDE8DF), const Color(0xFFF5F1EB)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: Center(
+      child: Text(widget.product.emoji,
+          style: const TextStyle(fontSize: 42)),
+    ),
+  );
+}
