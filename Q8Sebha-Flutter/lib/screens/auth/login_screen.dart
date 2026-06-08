@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../providers/auth_provider.dart';
 import '../../main.dart';
 import '../../widgets/common_widgets.dart';
@@ -55,10 +57,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email      = TextEditingController();
   final _username   = TextEditingController();
 
-  bool _showPass  = false;
-  bool _isSignup  = false;
-  bool _phoneMode = true;
-  String? _localError; // أخطاء التحقق المحلية
+  bool _showPass   = false;
+  bool _isSignup   = false;
+  bool _phoneMode  = true;
+  bool _rememberMe = false;
+  bool _googleLoading = false;
+  String? _localError;
 
   CountryCode _country = _countries[0];
 
@@ -67,10 +71,68 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _biometricEnabled = false;
   BiometricType? _bioType;
 
+  static const _kRemember    = 'remember_me';
+  static const _kSavedId     = 'saved_identifier';
+  static const _kSavedPass   = 'saved_password';
+  static const _kPhoneMode   = 'saved_phone_mode';
+
+  final _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+
   @override
   void initState() {
     super.initState();
     _checkBiometric();
+    _loadRemembered();
+  }
+
+  Future<void> _loadRemembered() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rem   = prefs.getBool(_kRemember) ?? false;
+    if (!rem) return;
+    final savedId   = prefs.getString(_kSavedId)   ?? '';
+    final savedPass = prefs.getString(_kSavedPass)  ?? '';
+    final phoneMode = prefs.getBool(_kPhoneMode)    ?? true;
+    if (!mounted) return;
+    setState(() {
+      _rememberMe = true;
+      _phoneMode  = phoneMode;
+      if (phoneMode) {
+        _phone.text = savedId;
+      } else {
+        _identifier.text = savedId;
+      }
+      _password.text = savedPass;
+    });
+  }
+
+  Future<void> _saveRemembered(String identifier, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setBool  (_kRemember,  true);
+      await prefs.setString(_kSavedId,   identifier);
+      await prefs.setString(_kSavedPass, password);
+      await prefs.setBool  (_kPhoneMode, _phoneMode);
+    } else {
+      await prefs.remove(_kRemember);
+      await prefs.remove(_kSavedId);
+      await prefs.remove(_kSavedPass);
+    }
+  }
+
+  Future<void> _loginWithGoogle(AuthProvider auth) async {
+    setState(() => _googleLoading = true);
+    try {
+      await _googleSignIn.signOut(); // إعادة اختيار الحساب دائماً
+      final account = await _googleSignIn.signIn();
+      if (account == null) { setState(() => _googleLoading = false); return; }
+      final gAuth  = await account.authentication;
+      final idToken = gAuth.idToken;
+      if (idToken == null) throw Exception('لم يتم الحصول على token');
+      await auth.loginWithGoogle(idToken);
+    } catch (e) {
+      setState(() => _localError = 'فشل تسجيل الدخول بـ Google');
+    }
+    if (mounted) setState(() => _googleLoading = false);
   }
 
   Future<void> _checkBiometric() async {
@@ -137,10 +199,15 @@ class _LoginScreenState extends State<LoginScreen> {
       // هل نحفظ للبيومتري؟ (نسأل فقط إذا الجهاز يدعمه ولم يفعّله بعد)
       if (_biometricAvail && !_biometricEnabled) {
         auth.login(id, pass).then((_) {
-          if (auth.isLoggedIn && mounted) _askEnableBiometric(id, pass);
+          if (auth.isLoggedIn && mounted) {
+            _saveRemembered(id, pass);
+            _askEnableBiometric(id, pass);
+          }
         });
       } else {
-        auth.login(id, pass);
+        auth.login(id, pass).then((_) {
+          if (auth.isLoggedIn && mounted) _saveRemembered(id, pass);
+        });
       }
     }
   }
@@ -322,6 +389,38 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
+                  // ─── تذكرني (فقط في وضع الدخول) ─────────────────────
+                  if (!_isSignup) ...[
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: () => setState(() => _rememberMe = !_rememberMe),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const Text('تذكرني',
+                            style: TextStyle(fontFamily: 'Tajawal', fontSize: 13,
+                                color: Color(0xFF555555))),
+                          const SizedBox(width: 8),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 22, height: 22,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _rememberMe ? AppTheme.primary : Colors.transparent,
+                              border: Border.all(
+                                color: _rememberMe ? AppTheme.primary : Colors.grey.shade400,
+                                width: 2,
+                              ),
+                            ),
+                            child: _rememberMe
+                                ? const Icon(Icons.check, color: Colors.white, size: 14)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   // ─── بانر الخطأ ───────────────────────────────────────
                   if (displayError != null) ...[
                     const SizedBox(height: 8),
@@ -386,7 +485,53 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                   const SizedBox(height: 12),
                   const Divider(height: 1),
+                  const SizedBox(height: 10),
+
+                  // ─── تسجيل الدخول بـ Google ───────────────────────────
+                  if (!_isSignup)
+                    GestureDetector(
+                      onTap: _googleLoading || auth.isLoading
+                          ? null
+                          : () => _loginWithGoogle(auth),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.grey.shade300),
+                          boxShadow: [BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4, offset: const Offset(0, 2),
+                          )],
+                        ),
+                        child: _googleLoading
+                            ? const SizedBox(
+                                height: 20,
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+                            : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                // Google G logo
+                                Container(
+                                  width: 20, height: 20,
+                                  decoration: const BoxDecoration(shape: BoxShape.circle),
+                                  child: const Text('G',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.w900,
+                                      color: Color(0xFF4285F4),
+                                      height: 1.25,
+                                    )),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text('الدخول عن طريق Google',
+                                  style: TextStyle(fontFamily: 'Tajawal',
+                                      fontWeight: FontWeight.w700, fontSize: 14,
+                                      color: Color(0xFF444444))),
+                              ]),
+                      ),
+                    ),
                   const SizedBox(height: 6),
+
                   // ─── الدخول كضيف ─────────────────────────────────────
                   TextButton.icon(
                     onPressed: auth.continueAsGuest,

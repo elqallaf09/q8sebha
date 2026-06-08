@@ -174,6 +174,76 @@ router.get('/me', authenticate, async (req, res) => {
   res.json({ success: true, data: rows[0] });
 });
 
+// ─── POST /auth/google ────────────────────────────────────────────────────
+// يستقبل Google ID Token من Flutter ويُسجّل أو يدخل المستخدم
+router.post('/google', async (req, res) => {
+  const { id_token, device_token } = req.body;
+  if (!id_token) return res.status(400).json({ success: false, message: 'id_token مطلوب' });
+
+  try {
+    const { OAuth2Client } = require('google-auth-library');
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    if (!GOOGLE_CLIENT_ID) {
+      return res.status(500).json({ success: false, message: 'Google Auth غير مضبوط' });
+    }
+
+    const client  = new OAuth2Client(GOOGLE_CLIENT_ID);
+    const ticket  = await client.verifyIdToken({ idToken: id_token, audience: GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    const { email, name, sub: googleId, picture } = payload;
+
+    if (!email) return res.status(400).json({ success: false, message: 'لا يمكن جلب الإيميل من Google' });
+
+    // ابحث عن المستخدم بالإيميل أو google_id
+    let userRow = await db.query('SELECT * FROM users WHERE email=$1 OR google_id=$2', [email, googleId]);
+    let user = userRow.rows[0];
+
+    if (!user) {
+      // إنشاء حساب جديد
+      const phone    = `google_${googleId}`; // placeholder
+      const username = `g_${googleId.slice(-8)}`;
+      const { rows } = await db.query(
+        `INSERT INTO users (name,phone,email,username,google_id,avatar_url,contact_method,delivery_method)
+         VALUES ($1,$2,$3,$4,$5,$6,'whatsapp','home') RETURNING *`,
+        [name, phone, email, username, googleId, picture || null]
+      );
+      user = rows[0];
+      await db.query(
+        `INSERT INTO notifications (user_id,type,title,body,icon) VALUES ($1,'system',$2,$3,'🎉')`,
+        [user.id, 'أهلاً بك في Q8Sebha!', 'يسعدنا انضمامك عبر Google. استمتع بتصفح أجود المسابيح.']
+      );
+    } else {
+      // تحديث google_id إذا تسجّل مسبقاً بالإيميل
+      if (!user.google_id) {
+        await db.query('UPDATE users SET google_id=$1 WHERE id=$2', [googleId, user.id]);
+      }
+    }
+
+    if (user.is_banned)
+      return res.status(403).json({ success: false, message: 'تم حظر حسابك: ' + (user.ban_reason || 'مخالفة الشروط') });
+
+    if (device_token) await db.query('UPDATE users SET device_token=$1 WHERE id=$2', [device_token, user.id]);
+
+    // حذف توكنات قديمة وإنشاء جديدة
+    await db.query('DELETE FROM refresh_tokens WHERE user_id=$1', [user.id]);
+    const { access, refresh } = generateTokens(user.id);
+    await db.query(
+      `INSERT INTO refresh_tokens (user_id,token,expires_at) VALUES ($1,$2,NOW()+INTERVAL '30 days')`,
+      [user.id, refresh]
+    );
+
+    res.json({ success: true, data: {
+      user: { id:user.id, name:user.name, phone:user.phone, email:user.email,
+              role:user.role, avatar_url:user.avatar_url,
+              contact_method:user.contact_method, delivery_method:user.delivery_method },
+      access_token: access, refresh_token: refresh,
+    }});
+  } catch (err) {
+    console.error('[google-auth]', err.message);
+    res.status(401).json({ success: false, message: 'Google Token غير صالح' });
+  }
+});
+
 // ─── PATCH /auth/device-token ─────────────────────────────────────────────
 // يحفظ FCM token للجهاز الحالي
 router.patch('/device-token', authenticate, async (req, res) => {

@@ -102,6 +102,9 @@ class APIService {
     return request('POST', '/auth/register', body:body, auth:false);
   }
 
+  Future<Map<String,dynamic>> loginWithGoogle(String idToken) =>
+      request('POST', '/auth/google', body:{'id_token':idToken}, auth:false);
+
   Future<Map<String,dynamic>> me() => request('GET', '/auth/me');
 
   Future<void> forgotPassword(String email) =>

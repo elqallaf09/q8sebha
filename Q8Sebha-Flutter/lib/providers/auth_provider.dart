@@ -76,6 +76,20 @@ class AuthProvider extends ChangeNotifier {
     isLoading = false; notifyListeners();
   }
 
+  Future<void> loginWithGoogle(String idToken) async {
+    isLoading = true; errorMessage = null; notifyListeners();
+    try {
+      final r = await _api.loginWithGoogle(idToken);
+      final d = r['data'];
+      await TokenStore.save(d['access_token'], d['refresh_token']);
+      currentUser = User.fromJson(d['user']);
+      await _ws.connectWithToken();
+      appState = AppState.main;
+    } on APIError catch (e) { errorMessage = e.message; }
+    catch (_) { errorMessage = 'خطأ في تسجيل الدخول بـ Google'; }
+    isLoading = false; notifyListeners();
+  }
+
   void continueAsGuest() { appState = AppState.guest; notifyListeners(); }
 
   void clearError() { errorMessage = null; notifyListeners(); }
