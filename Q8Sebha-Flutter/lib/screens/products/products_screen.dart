@@ -33,8 +33,8 @@ class _ProductsScreenState extends State<ProductsScreen>
 
   // ─── هيكل الفئات الهرمي ─────────────────────────────────────────────────
   static const _cats = <Map<String, dynamic>>[
-    {'name':'الكل',         'slug':null,          'color':0xFF1A1A2E,'subs':null},
-    {'name':'مسابيح',       'slug':'masabih',     'color':0xFF6B4226,'subs':[
+    {'name':'الكل',         'slug':null,          'color':0xFF1A1A2E,'emoji':'✨','subs':null},
+    {'name':'مسابيح',       'slug':'masabih',     'color':0xFF6B4226,'emoji':'📿','subs':[
       {'name':'كهرب',        'slug':'masabih-kahrab'},
       {'name':'مصنع',        'slug':'masabih-masna3'},
       {'name':'فاتوران',     'slug':'masabih-faturan'},
@@ -45,10 +45,10 @@ class _ProductsScreenState extends State<ProductsScreen>
       {'name':'تراب كهرب',   'slug':'masabih-turab'},
       {'name':'مستكة',       'slug':'masabih-mastaka'},
     ]},
-    {'name':'تحف',          'slug':'tuhaf',       'color':0xFF4A148C,'subs':null},
-    {'name':'خواتم',        'slug':'khawatim',    'color':0xFF880E4F,'subs':null},
-    {'name':'صخور',         'slug':'sukhur',      'color':0xFF546E7A,'subs':null},
-    {'name':'أحجار كريمة',  'slug':'ahjar-karima','color':0xFF1565C0,'subs':[
+    {'name':'تحف',          'slug':'tuhaf',       'color':0xFF4A148C,'emoji':'🏺','subs':null},
+    {'name':'خواتم',        'slug':'khawatim',    'color':0xFF880E4F,'emoji':'💍','subs':null},
+    {'name':'صخور',         'slug':'sukhur',      'color':0xFF546E7A,'emoji':'🪨','subs':null},
+    {'name':'أحجار كريمة',  'slug':'ahjar-karima','color':0xFF1565C0,'emoji':'💎','subs':[
       {'name':'ألماس',        'slug':'ahjar-almas'},
       {'name':'ياقوت أحمر',  'slug':'ahjar-ruby'},
       {'name':'ياقوت أزرق',  'slug':'ahjar-sapphire'},
@@ -395,17 +395,34 @@ class _ProductsScreenState extends State<ProductsScreen>
                       ),
                       // الشعار
                       Row(children: [
-                        ShaderMask(
-                          shaderCallback: (b) => const LinearGradient(
-                            colors: [AppTheme.goldLight, AppTheme.gold],
-                          ).createShader(b),
-                          child: const Text('مسابيح لايقر',
+                        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                          ShaderMask(
+                            shaderCallback: (b) => const LinearGradient(
+                              colors: [AppTheme.goldLight, AppTheme.gold],
+                            ).createShader(b),
+                            child: const Text('مسابيح لايقر',
+                              style: TextStyle(fontFamily: 'Tajawal',
+                                  fontWeight: FontWeight.w900, fontSize: 22,
+                                  color: Colors.white, letterSpacing: 0.5)),
+                          ),
+                          Text('Liger Mesbah',
                             style: TextStyle(fontFamily: 'Tajawal',
-                                fontWeight: FontWeight.w900, fontSize: 24,
-                                color: Colors.white, letterSpacing: 0.5)),
+                                fontSize: 11, color: Colors.white.withOpacity(0.55),
+                                letterSpacing: 1.5)),
+                        ]),
+                        const SizedBox(width: 10),
+                        Container(
+                          width: 38, height: 38,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppTheme.gold.withOpacity(0.5), width: 1.5),
+                            boxShadow: [BoxShadow(color: AppTheme.gold.withOpacity(0.2),
+                                blurRadius: 8, spreadRadius: 1)],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset('assets/images/logo.jpg', fit: BoxFit.cover),
+                          ),
                         ),
-                        const SizedBox(width: 6),
-                        const Text('📿', style: TextStyle(fontSize: 20)),
                       ]),
                     ],
                   ),
@@ -528,6 +545,9 @@ class _ProductsScreenState extends State<ProductsScreen>
                           blurRadius: 8, offset: const Offset(0, 3))] : [],
                     ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(c['emoji'] as String,
+                        style: const TextStyle(fontSize: 14)),
+                      const SizedBox(width: 5),
                       Text(c['name'] as String,
                         style: TextStyle(
                           fontFamily: 'Tajawal', fontSize: 13,
@@ -669,23 +689,19 @@ class _ProductsScreenState extends State<ProductsScreen>
   // ─── Grid ──────────────────────────────────────────────────────────────────
   Widget _buildGrid(ProductProvider vm) {
     if (vm.isLoading) {
-      return SliverFillRemaining(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(height: 40),
-            SizedBox(
-              width: 40, height: 40,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                valueColor: const AlwaysStoppedAnimation(AppTheme.gold),
-                backgroundColor: AppTheme.gold.withOpacity(0.15),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('جارٍ التحميل...', style: TextStyle(
-                fontFamily: 'Tajawal', fontSize: 14, color: AppTheme.textLight)),
-          ],
+      return SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+        sliver: SliverGrid(
+          delegate: SliverChildBuilderDelegate(
+            (_, i) => const _SkeletonCard(),
+            childCount: 6,
+          ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: R.cols(context),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: R.cardRatio(context),
+          ),
         ),
       );
     }
@@ -697,22 +713,26 @@ class _ProductsScreenState extends State<ProductsScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 100, height: 100,
+                width: 110, height: 110,
                 decoration: BoxDecoration(
-                  color: AppTheme.gold.withOpacity(0.08),
                   shape: BoxShape.circle,
+                  border: Border.all(color: AppTheme.gold.withOpacity(0.4), width: 2),
+                  boxShadow: [
+                    BoxShadow(color: AppTheme.gold.withOpacity(0.15),
+                        blurRadius: 30, spreadRadius: 5),
+                  ],
                 ),
-                child: const Center(
-                  child: Text('🔍', style: TextStyle(fontSize: 44)),
+                child: ClipOval(
+                  child: Image.asset('assets/images/logo.jpg', fit: BoxFit.cover),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
               const Text('لا توجد منتجات',
-                style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
-                    fontSize: 18, color: AppTheme.textDark)),
+                style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800,
+                    fontSize: 20, color: AppTheme.textDark)),
               const SizedBox(height: 8),
-              const Text('جرّب تغيير الفلتر أو البحث',
-                style: TextStyle(fontFamily: 'Tajawal', fontSize: 13,
+              Text('جرّب تغيير الفئة أو البحث',
+                style: TextStyle(fontFamily: 'Tajawal', fontSize: 14,
                     color: AppTheme.textLight)),
             ],
           ),
@@ -791,7 +811,7 @@ class _ProductCardState extends State<_ProductCard>
   void _shareProduct() {
     final p = widget.product;
     final price = p.price.toStringAsFixed(p.price % 1 == 0 ? 0 : 3);
-    Share.share('🛒 ${p.name}\n💰 السعر: $price د.ك\n\nتسوّق معنا على تطبيق Q8Sebha 📿');
+    Share.share('🛒 ${p.name}\n💰 السعر: $price د.ك\n\nتسوّق معنا على تطبيق مسابيح لايقر 📿');
   }
 
   @override
@@ -1046,4 +1066,79 @@ class _ProductCardState extends State<_ProductCard>
           style: const TextStyle(fontSize: 42)),
     ),
   );
+}
+
+// ─── Skeleton Card ─────────────────────────────────────────────────────────────
+class _SkeletonCard extends StatefulWidget {
+  const _SkeletonCard();
+  @override State<_SkeletonCard> createState() => _SkeletonCardState();
+}
+
+class _SkeletonCardState extends State<_SkeletonCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this,
+        duration: const Duration(milliseconds: 1200))
+      ..repeat(reverse: true);
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) {
+        final opacity = 0.06 + _anim.value * 0.12;
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04),
+                blurRadius: 12, offset: const Offset(0, 4))],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // صورة
+            Expanded(
+              flex: 11,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  color: Colors.black.withOpacity(opacity),
+                ),
+              ),
+            ),
+            // معلومات
+            Expanded(
+              flex: 6,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(height: 12, width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(opacity),
+                          borderRadius: BorderRadius.circular(6))),
+                    Container(height: 10, width: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(opacity * 0.7),
+                          borderRadius: BorderRadius.circular(6))),
+                  ],
+                ),
+              ),
+            ),
+          ]),
+        );
+      },
+    );
+  }
 }
