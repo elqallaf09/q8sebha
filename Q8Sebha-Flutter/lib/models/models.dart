@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart' show Color;
+
 // ─── User ─────────────────────────────────────────────────────────────────
 class User {
   final int id;
@@ -209,38 +211,95 @@ class Bid {
 }
 
 // ─── Order ────────────────────────────────────────────────────────────────
+// ─── OrderItem ────────────────────────────────────────────────────────────
+class OrderItem {
+  final int id, productId, quantity;
+  final String productName, productEmoji;
+  final double unitPrice, totalPrice;
+
+  OrderItem({required this.id, required this.productId, required this.quantity,
+             required this.productName, required this.productEmoji,
+             required this.unitPrice, required this.totalPrice});
+
+  factory OrderItem.fromJson(Map<String,dynamic> j) => OrderItem(
+    id:           j['id'],
+    productId:    j['product_id'],
+    quantity:     j['quantity'] ?? 1,
+    productName:  j['product_name'] ?? '',
+    productEmoji: j['product_emoji'] ?? '📿',
+    unitPrice:    double.tryParse(j['unit_price'].toString()) ?? 0.0,
+    totalPrice:   double.tryParse(j['total_price'].toString()) ?? 0.0,
+  );
+}
+
+// ─── Order ────────────────────────────────────────────────────────────────
 class Order {
   final int id;
   String orderNumber, status;
-  double totalAmount;
-  String? productName, productEmoji, paymentLink, deliveryArea, notes;
-  int? productId, auctionId;
+  double totalPrice;
+  String? productName, productEmoji, paymentLink, notes;
+  String? buyerName, buyerPhone, deliveryAddress;
+  int? productId;
+  bool isCartOrder;
+  List<OrderItem> items;
   String? createdAt;
 
   Order({required this.id, required this.orderNumber, required this.status,
-         required this.totalAmount, this.productName, this.productEmoji,
-         this.paymentLink, this.deliveryArea, this.notes,
-         this.productId, this.auctionId, this.createdAt});
+         required this.totalPrice, this.productName, this.productEmoji,
+         this.paymentLink, this.notes, this.buyerName, this.buyerPhone,
+         this.deliveryAddress, this.productId, this.isCartOrder = false,
+         this.items = const [], this.createdAt});
 
   factory Order.fromJson(Map<String,dynamic> j) => Order(
-    id: j['id'], orderNumber: j['order_number'],
-    status: j['status'] ?? 'pending',
-    totalAmount: (j['total_amount'] as num).toDouble(),
-    productName:  j['product_name'],
-    productEmoji: j['product_emoji'],
-    paymentLink:  j['payment_link'],
-    deliveryArea: j['delivery_area'],
-    notes:       j['notes'],
-    productId:   j['product_id'],
-    auctionId:   j['auction_id'],
-    createdAt:   j['created_at'],
+    id:              j['id'],
+    orderNumber:     j['order_number'] ?? '#${j['id']}',
+    status:          j['status'] ?? 'pending',
+    totalPrice:      double.tryParse(j['total_price'].toString()) ?? 0.0,
+    productName:     j['product_name'],
+    productEmoji:    j['product_emoji'],
+    paymentLink:     j['payment_link'],
+    notes:           j['notes'],
+    buyerName:       j['buyer_name'],
+    buyerPhone:      j['buyer_phone'],
+    deliveryAddress: j['delivery_address'],
+    productId:       j['product_id'],
+    isCartOrder:     j['is_cart_order'] == 1 || j['is_cart_order'] == true,
+    items: (j['items'] as List? ?? []).map((i) => OrderItem.fromJson(i)).toList(),
+    createdAt:       j['created_at'],
   );
 
-  String get totalFormatted  => '${totalAmount.toStringAsFixed(3)} د.ك';
+  String get totalFormatted => '${totalPrice.toStringAsFixed(totalPrice % 1 == 0 ? 0 : 3)} د.ك';
+
   String get statusDisplay {
-    const m = {'pending':'قيد الانتظار','confirmed':'مؤكد','processing':'قيد التجهيز',
-                'shipped':'تم الشحن','delivered':'تم التوصيل','cancelled':'ملغي'};
+    const m = {'pending':'قيد الانتظار','confirmed':'تم التأكيد',
+                'processing':'قيد التجهيز','shipped':'تم الشحن',
+                'delivered':'تم التوصيل','cancelled':'ملغي'};
     return m[status] ?? status;
+  }
+
+  Color get statusColor {
+    switch (status) {
+      case 'confirmed':  return const Color(0xFF2196F3);
+      case 'processing': return const Color(0xFFFF9800);
+      case 'shipped':    return const Color(0xFF9C27B0);
+      case 'delivered':  return const Color(0xFF4CAF50);
+      case 'cancelled':  return const Color(0xFFF44336);
+      default:           return const Color(0xFF9E9E9E);
+    }
+  }
+
+  String get statusEmoji {
+    const m = {'pending':'⏳','confirmed':'✅','processing':'⚙️',
+                'shipped':'🚚','delivered':'🎉','cancelled':'❌'};
+    return m[status] ?? '📦';
+  }
+
+  // عرض المحتوى — منتج واحد أو قائمة
+  String get summary {
+    if (isCartOrder && items.isNotEmpty) {
+      return items.map((i) => '${i.productEmoji} ${i.productName} ×${i.quantity}').join('\n');
+    }
+    return '${productEmoji ?? '📦'} ${productName ?? 'منتج'}';
   }
 }
 
@@ -251,66 +310,17 @@ class AppNotification {
   bool isRead;
   String? createdAt;
 
-  AppNotification({required this.id, required this.type, required this.title,
-                   required this.body, this.icon = '🔔', this.isRead = false, this.createdAt});
+  AppNotification({required this.id, required this.type,
+    required this.title, required this.body, required this.icon,
+    this.isRead = false, this.createdAt});
 
   factory AppNotification.fromJson(Map<String,dynamic> j) => AppNotification(
-    id: j['id'], type: j['type'] ?? 'system',
-    title: j['title'], body: j['body'],
-    icon: j['icon'] ?? '🔔',
-    isRead: j['is_read'] == 1 || j['is_read'] == true,
+    id:        j['id'],
+    type:      j['type'] ?? 'info',
+    title:     j['title'] ?? '',
+    body:      j['body'] ?? '',
+    icon:      j['icon'] ?? '🔔',
+    isRead:    j['is_read'] == 1 || j['is_read'] == true,
     createdAt: j['created_at'],
   );
-}
-
-// ─── CartItem ─────────────────────────────────────────────────────────────
-class CartItem {
-  final int id;
-  final int productId;
-  final String name;
-  final double price;
-  final String emoji;
-  final List<String> imageUrls;
-  int quantity;
-  final String? notes;
-
-  CartItem({
-    required this.id, required this.productId, required this.name,
-    required this.price, required this.emoji, required this.imageUrls,
-    required this.quantity, this.notes,
-  });
-
-  double get total => price * quantity;
-  String get priceFormatted => price.toStringAsFixed(price % 1 == 0 ? 0 : 3);
-  String get totalFormatted => total.toStringAsFixed(total % 1 == 0 ? 0 : 3);
-
-  factory CartItem.fromJson(Map<String,dynamic> j) {
-    List<String> imgs = [];
-    if (j['image_urls'] != null) {
-      if (j['image_urls'] is List) imgs = List<String>.from(j['image_urls']);
-      else if (j['image_urls'] is String && (j['image_urls'] as String).isNotEmpty) {
-        try { imgs = List<String>.from(j['image_urls'].toString()
-            .replaceAll('[','').replaceAll(']','').replaceAll('"','').split(',')); } catch (_) {}
-      }
-    }
-    return CartItem(
-      id: j['id'],
-      productId: j['product_id'],
-      name: j['name'] ?? '',
-      price: double.tryParse(j['price'].toString()) ?? 0.0,
-      emoji: j['emoji'] ?? '📿',
-      imageUrls: imgs,
-      quantity: j['quantity'] ?? 1,
-      notes: j['notes'],
-    );
-  }
-}
-
-// ─── Category ─────────────────────────────────────────────────────────────
-class Category {
-  final int id;
-  String name, nameEn, icon;
-  Category({required this.id, required this.name, required this.nameEn, required this.icon});
-  factory Category.fromJson(Map<String,dynamic> j) =>
-      Category(id:j['id'], name:j['name'], nameEn:j['name_en'], icon:j['icon'] ?? '📿');
 }

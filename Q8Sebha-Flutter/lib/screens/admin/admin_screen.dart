@@ -1,8 +1,11 @@
+import 'dart:typed_data';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../main.dart';
 import '../../config/app_config.dart';
+import '../../models/models.dart';
 import '../../services/api_service.dart';
 import '../../widgets/common_widgets.dart';
 
@@ -18,7 +21,7 @@ class _AdminScreenState extends State<AdminScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -39,6 +42,7 @@ class _AdminScreenState extends State<AdminScreen>
           Tab(icon: Icon(Icons.inventory_2, size: 18), text: 'المنتجات'),
           Tab(icon: Icon(Icons.people, size: 18), text: 'المستخدمون'),
           Tab(icon: Icon(Icons.gavel, size: 18), text: 'المزادات'),
+          Tab(icon: Icon(Icons.shopping_bag, size: 18), text: 'الطلبات'),
         ],
       ),
     ),
@@ -49,6 +53,7 @@ class _AdminScreenState extends State<AdminScreen>
         _ProductsTab(),
         _UsersTab(),
         _AuctionsTab(),
+        _OrdersTab(),
       ],
     ),
   );
@@ -806,4 +811,268 @@ class _AuctionsTabState extends State<_AuctionsTab> {
                 ),
               );
             }));
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  _OrdersTab — تبويب الطلبات في لوحة الأدمن
+// ══════════════════════════════════════════════════════════════════════════════
+class _OrdersTab extends StatefulWidget {
+  const _OrdersTab();
+  @override State<_OrdersTab> createState() => _OrdersTabState();
+}
+
+
+class _OrdersTabState extends State<_OrdersTab> {
+  List<dynamic> _orders = [];
+  Map<String,int> _counts = {};
+  bool _loading = true;
+  String? _filterStatus;
+
+  static const _statuses = [null,'pending','confirmed','processing','shipped','delivered','cancelled'];
+  static const _statusLabels = {
+    null:'الكل','pending':'انتظار','confirmed':'مؤكد','processing':'تجهيز',
+    'shipped':'شُحن','delivered':'وُصّل','cancelled':'ملغي',
+  };
+  static const _statusColors = {
+    'pending':Color(0xFFFF9500),'confirmed':Color(0xFF34C759),
+    'processing':Color(0xFF007AFF),'shipped':Color(0xFF5856D6),
+    'delivered':Color(0xFF30D158),'cancelled':Color(0xFFFF3B30),
+  };
+  static const _statusEmojis = {
+    'pending':'⏳','confirmed':'✅','processing':'⚙️',
+    'shipped':'🚚','delivered':'🎉','cancelled':'❌',
+  };
+
+  @override void initState() { super.initState(); _load(); }
+
+  Future<void> _load() async {
+    setState(()=>_loading=true);
+    try {
+      final r = await APIService.instance.adminOrders(status:_filterStatus);
+      setState((){
+        _orders = r['data'] as List;
+        final raw = (r['meta']?['statusCounts'] as Map<String,dynamic>? ?? {});
+        _counts = raw.map((k,v)=>MapEntry(k,(v as num).toInt()));
+        _loading = false;
+      });
+    } catch(_) { setState(()=>_loading=false); }
+  }
+
+  Future<void> _changeStatus(dynamic order) async {
+    final id = order['id'] as int;
+    final current = order['status'] as String? ?? 'pending';
+    final valid = ['pending','confirmed','processing','shipped','delivered','cancelled'];
+    String? chosen = current;
+    await showDialog(context:context, builder:(_)=>AlertDialog(
+      title:const Text('تغيير حالة الطلب',style:TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700)),
+      content:StatefulBuilder(builder:(ctx,setSt)=>Column(
+        mainAxisSize:MainAxisSize.min,
+        children:valid.map((s)=>RadioListTile<String>(
+          value:s, groupValue:chosen,
+          onChanged:(v){setSt(()=>chosen=v);},
+          title:Text('${_statusEmojis[s]??''} ${_statusLabels[s]??s}',
+            style:const TextStyle(fontFamily:'Tajawal',fontSize:14)),
+          activeColor:AppTheme.primary,
+        )).toList())),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(context),
+          child:const Text('إلغاء',style:TextStyle(fontFamily:'Tajawal'))),
+        ElevatedButton(
+          onPressed:() async {
+            Navigator.pop(context);
+            if (chosen==null||chosen==current) return;
+            try {
+              await APIService.instance.updateOrderStatus(id, chosen!);
+              _load();
+            } catch(e) {
+              if(mounted) ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content:Text(e.toString(),style:const TextStyle(fontFamily:'Tajawal'))));
+            }
+          },
+          style:ElevatedButton.styleFrom(backgroundColor:AppTheme.primary),
+          child:const Text('حفظ',style:TextStyle(fontFamily:'Tajawal',color:Colors.white))),
+      ],
+    ));
+  }
+
+  Future<void> _sendPaymentLink(dynamic order) async {
+    final ctrl = TextEditingController();
+    await showDialog(context:context, builder:(_)=>AlertDialog(
+      title:const Text('إرسال رابط الدفع',style:TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700)),
+      content:TextField(
+        controller:ctrl,
+        textDirection:TextDirection.ltr,
+        style:const TextStyle(fontFamily:'Tajawal',fontSize:13),
+        decoration:const InputDecoration(hintText:'https://...', prefixIcon:Icon(Icons.link))),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(context),
+          child:const Text('إلغاء',style:TextStyle(fontFamily:'Tajawal'))),
+        ElevatedButton(
+          onPressed:() async {
+            final link = ctrl.text.trim();
+            if (link.isEmpty) return;
+            Navigator.pop(context);
+            try {
+              await APIService.instance.sendOrderPaymentLink(order['id'] as int, link);
+              _load();
+              if(mounted) ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content:Text('تم إرسال الرابط',style:TextStyle(fontFamily:'Tajawal'))));
+            } catch(e) {
+              if(mounted) ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content:Text(e.toString(),style:const TextStyle(fontFamily:'Tajawal'))));
+            }
+          },
+          style:ElevatedButton.styleFrom(backgroundColor:AppTheme.primary),
+          child:const Text('إرسال',style:TextStyle(fontFamily:'Tajawal',color:Colors.white))),
+      ],
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(children:[
+    // فلتر الحالة
+    Container(height:42, margin:const EdgeInsets.fromLTRB(16,12,16,0),
+      child:ListView(scrollDirection:Axis.horizontal,
+        children:_statuses.map((s){
+          final sel = _filterStatus==s;
+          final cnt = s==null ? _orders.length : (_counts[s]??0);
+          return GestureDetector(
+            onTap:(){ setState(()=>_filterStatus=s); _load(); },
+            child:AnimatedContainer(
+              duration:const Duration(milliseconds:200),
+              margin:const EdgeInsets.only(left:8),
+              padding:const EdgeInsets.symmetric(horizontal:14,vertical:6),
+              decoration:BoxDecoration(
+                color:sel?AppTheme.primary:Colors.white,
+                borderRadius:BorderRadius.circular(20),
+                border:Border.all(color:sel?AppTheme.primary:Colors.grey.shade300)),
+              child:Text(
+                cnt>0?'${_statusLabels[s]} ($cnt)':'${_statusLabels[s]}',
+                style:TextStyle(fontFamily:'Tajawal',fontSize:12,fontWeight:FontWeight.w600,
+                  color:sel?Colors.white:AppTheme.textDark))));
+        }).toList())),
+    const SizedBox(height:8),
+    Expanded(child:_loading
+      ? const LoadingBody()
+      : _orders.isEmpty
+          ? const Center(child:Text('لا توجد طلبات',
+              style:TextStyle(fontFamily:'Tajawal',fontSize:16,color:AppTheme.textMid)))
+          : RefreshIndicator(
+              onRefresh:_load,
+              child:ListView.builder(
+                padding:const EdgeInsets.fromLTRB(16,4,16,24),
+                itemCount:_orders.length,
+                itemBuilder:(_,i)=>_buildCard(_orders[i])))),
+  ]);
+
+  Widget _buildCard(dynamic o) {
+    final status = o['status'] as String? ?? 'pending';
+    final color  = _statusColors[status] ?? AppTheme.textMid;
+    final isCart = (o['is_cart_order'] as num? ?? 0)==1;
+    final items  = (o['items'] as List?) ?? [];
+    final total  = double.tryParse('${o['total_price']??0}') ?? 0;
+
+    return Container(
+      margin:const EdgeInsets.only(bottom:12),
+      decoration:BoxDecoration(
+        color:Colors.white,
+        borderRadius:BorderRadius.circular(16),
+        boxShadow:[BoxShadow(color:Colors.black.withOpacity(0.05),blurRadius:8,offset:const Offset(0,2))]),
+      child:Column(children:[
+        // هيدر
+        Container(
+          padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),
+          decoration:BoxDecoration(
+            color:color.withOpacity(0.06),
+            borderRadius:const BorderRadius.vertical(top:Radius.circular(16))),
+          child:Row(children:[
+            Container(
+              padding:const EdgeInsets.symmetric(horizontal:10,vertical:3),
+              decoration:BoxDecoration(color:color.withOpacity(0.14),borderRadius:BorderRadius.circular(20)),
+              child:Text('${_statusEmojis[status]??''} ${_statusLabels[status]??status}',
+                style:TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700,fontSize:11,color:color))),
+            const SizedBox(width:8),
+            Expanded(child:Text(o['order_number']??'',overflow:TextOverflow.ellipsis,
+              style:const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700,fontSize:12,color:AppTheme.textDark))),
+            Text(_fmtDate(o['created_at']),
+              style:const TextStyle(fontFamily:'Tajawal',fontSize:11,color:AppTheme.textLight)),
+          ])),
+        // جسم
+        Padding(
+          padding:const EdgeInsets.fromLTRB(14,10,14,12),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.end,children:[
+            // المشتري
+            Row(mainAxisAlignment:MainAxisAlignment.end,children:[
+              Text(o['buyer_name']??o['buyer_name_full']??'مجهول',
+                style:const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w700,fontSize:14,color:AppTheme.textDark)),
+              const SizedBox(width:6),
+              const Icon(Icons.person,size:16,color:AppTheme.primary),
+            ]),
+            if ((o['buyer_phone']??'').toString().isNotEmpty)
+              Text(o['buyer_phone'].toString(), textDirection:TextDirection.ltr,
+                style:const TextStyle(fontFamily:'Tajawal',fontSize:12,color:AppTheme.textMid)),
+            const SizedBox(height:8),
+            // المنتجات
+            if (isCart && items.isNotEmpty)
+              ...items.map((item) => Padding(
+                padding:const EdgeInsets.only(bottom:4),
+                child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+                  Text('${(double.tryParse('${item['total_price']??0}')??0).toStringAsFixed(3)} د.ك',
+                    style:const TextStyle(fontFamily:'Tajawal',fontSize:12,color:AppTheme.textMid)),
+                  Text('${item['product_emoji']??'📿'} ${item['product_name']??''} ×${item['quantity']??1}',
+                    style:const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w600,fontSize:13,color:AppTheme.textDark)),
+                ])))
+            else
+              Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+                Text('${total.toStringAsFixed(3)} د.ك',
+                  style:const TextStyle(fontFamily:'Tajawal',fontSize:12,color:AppTheme.textMid)),
+                Text('${o['product_emoji']??'📿'} ${o['product_name']??'منتج'}',
+                  style:const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w600,fontSize:13,color:AppTheme.textDark)),
+              ]),
+            const Divider(height:14),
+            // أزرار + إجمالي
+            Row(children:[
+              Expanded(child:OutlinedButton.icon(
+                onPressed:()=>_sendPaymentLink(o),
+                icon:const Icon(Icons.payment,size:15,color:AppTheme.primary),
+                label:const Text('رابط الدفع',style:TextStyle(fontFamily:'Tajawal',fontSize:12,color:AppTheme.primary)),
+                style:OutlinedButton.styleFrom(
+                  side:const BorderSide(color:AppTheme.primary,width:1),
+                  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10)),
+                  padding:const EdgeInsets.symmetric(vertical:6)))),
+              const SizedBox(width:8),
+              Expanded(child:ElevatedButton.icon(
+                onPressed:()=>_changeStatus(o),
+                icon:const Icon(Icons.edit,size:15,color:Colors.white),
+                label:const Text('الحالة',style:TextStyle(fontFamily:'Tajawal',fontSize:12,color:Colors.white)),
+                style:ElevatedButton.styleFrom(
+                  backgroundColor:AppTheme.primary,
+                  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10)),
+                  padding:const EdgeInsets.symmetric(vertical:6)))),
+              const SizedBox(width:8),
+              ShaderMask(
+                shaderCallback:(b)=>const LinearGradient(colors:[AppTheme.goldLight,AppTheme.gold]).createShader(b),
+                child:Text('${total.toStringAsFixed(3)} د.ك',
+                  style:const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w800,fontSize:15,color:Colors.white))),
+            ]),
+            if ((o['delivery_address']??'').toString().isNotEmpty) ...[
+              const SizedBox(height:6),
+              Row(mainAxisAlignment:MainAxisAlignment.end,children:[
+                Flexible(child:Text(o['delivery_address'].toString(),textAlign:TextAlign.right,
+                  style:const TextStyle(fontFamily:'Tajawal',fontSize:12,color:AppTheme.textLight))),
+                const SizedBox(width:4),
+                const Icon(Icons.location_on,size:14,color:AppTheme.textLight),
+              ]),
+            ],
+          ])),
+      ]));
+  }
+
+  String _fmtDate(dynamic iso) {
+    if (iso==null) return '';
+    try {
+      final d = DateTime.parse(iso.toString()).toLocal();
+      return '${d.day}/${d.month}/${d.year}';
+    } catch(_) { return ''; }
+  }
 }

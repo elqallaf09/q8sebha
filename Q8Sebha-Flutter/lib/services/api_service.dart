@@ -169,10 +169,30 @@ class APIService {
     return request('POST', '/orders', body:body);
   }
 
+  Future<Order> createOrderFromCart({String? notes, String? deliveryAddress}) async {
+    final body = <String,dynamic>{};
+    if (notes != null && notes.isNotEmpty) body['notes'] = notes;
+    if (deliveryAddress != null && deliveryAddress.isNotEmpty) body['delivery_address'] = deliveryAddress;
+    final r = await request('POST', '/orders/from-cart', body: body);
+    return Order.fromJson(r['data']);
+  }
+
   Future<List<Order>> myOrders() async {
     final r = await request('GET', '/orders');
     return (r['data'] as List).map((e) => Order.fromJson(e)).toList();
   }
+
+  Future<Map<String,dynamic>> adminOrders({String? status, int page=1}) {
+    var q = '?page=$page';
+    if (status != null) q += '&status=$status';
+    return request('GET', '/orders/admin$q');
+  }
+
+  Future<void> updateOrderStatus(int id, String status) =>
+      request('PATCH', '/orders/$id/status', body: {'status': status});
+
+  Future<void> sendOrderPaymentLink(int id, String link) =>
+      request('PATCH', '/orders/$id/payment-link', body: {'payment_link': link});
 
   // ─── Upload Images ──────────────────────────────────────────────────────
   Future<List<String>> uploadImages(List<XFile> files) async {

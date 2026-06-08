@@ -191,6 +191,16 @@ const init = async () => {
       created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(user_id, product_id)
     )`,
+    `CREATE TABLE IF NOT EXISTS order_items (
+      id         SERIAL PRIMARY KEY,
+      order_id   INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES products(id),
+      product_name TEXT NOT NULL,
+      product_emoji TEXT DEFAULT '📿',
+      quantity   INTEGER DEFAULT 1,
+      unit_price NUMERIC NOT NULL,
+      total_price NUMERIC NOT NULL
+    )`,
   ];
   for (const sql of newTables) {
     try { await pool.query(sql); } catch (_) {}
@@ -208,6 +218,12 @@ const init = async () => {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_apartment TEXT`,
     `ALTER TABLE auctions ADD COLUMN IF NOT EXISTS reserve_price NUMERIC`,
     `ALTER TABLE auctions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`,
+    `ALTER TABLE orders ALTER COLUMN product_id DROP NOT NULL`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_link TEXT`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS buyer_name TEXT`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS buyer_phone TEXT`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address TEXT`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_cart_order INTEGER DEFAULT 0`,
   ];
   for (const m of migrations) {
     try { await pool.query(m); } catch (_) { /* already exists */ }

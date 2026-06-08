@@ -7,6 +7,7 @@ import '../../models/models.dart';
 import '../../main.dart';
 import '../../widgets/common_widgets.dart';
 import '../admin/admin_screen.dart';
+import '../orders/orders_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -210,8 +211,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                               fontSize: 14, color: AppTheme.textLight)),
                       ]),
                     )
-                  else
+                  else ...[
                     ..._orders.take(5).map((o) => _orderTile(o)),
+                    if (_orders.length > 5 || true)
+                      InkWell(
+                        onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const OrdersScreen())),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: const Center(
+                            child: Text('عرض كل الطلبات →',
+                              style: TextStyle(fontFamily: 'Tajawal',
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13, color: AppTheme.primary))))),
+                  ],
                 ],
               ),
               const SizedBox(height: 14),
