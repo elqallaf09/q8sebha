@@ -92,7 +92,7 @@ class Product {
     }
     return Product(
       id: j['id'], name: j['name'],
-      price: (j['price'] as num).toDouble(),
+      price: double.tryParse(j['price'].toString()) ?? 0.0,
       description: j['description'], categoryName: j['category_name'],
       material: j['material'], badge: j['badge'],
       originCountry: j['origin_country'],
@@ -146,16 +146,16 @@ class Auction {
       description: j['description'], sellerTerms: j['seller_terms'],
       sellerName: j['seller_name'], sellerPhone: j['seller_phone'],
       winnerName: j['winner_name'],
-      startingPrice: (j['starting_price'] as num).toDouble(),
-      maxPrice:      (j['max_price'] as num).toDouble(),
-      currentPrice:  (j['current_price'] as num).toDouble(),
-      bidIncrement:  (j['bid_increment'] as num?)?.toDouble() ?? 1.0,
-      reservePrice:  j['reserve_price'] != null ? (j['reserve_price'] as num).toDouble() : null,
+      startingPrice: double.tryParse(j['starting_price'].toString()) ?? 0.0,
+      maxPrice:      double.tryParse(j['max_price'].toString()) ?? 0.0,
+      currentPrice:  double.tryParse(j['current_price'].toString()) ?? 0.0,
+      bidIncrement:  double.tryParse(j['bid_increment']?.toString() ?? '') ?? 1.0,
+      reservePrice:  j['reserve_price'] != null ? double.tryParse(j['reserve_price'].toString()) : null,
       bidsCount:     j['bids_count'] ?? 0,
       durationMinutes: j['duration_minutes'] ?? 60,
       winnerId:       j['winner_id'],
       currentBidderId: j['current_bidder_id'],
-      finalPrice: j['final_price'] != null ? (j['final_price'] as num).toDouble() : null,
+      finalPrice: j['final_price'] != null ? double.tryParse(j['final_price'].toString()) : null,
       endsAt: ends, imageUrls: imgs,
     );
   }

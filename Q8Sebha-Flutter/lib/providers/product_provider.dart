@@ -18,9 +18,12 @@ class ProductProvider extends ChangeNotifier {
     try {
       products = await _api.products(category:category, search:search);
       _allProducts = List.of(products);
+      errorMessage = null;
+    } catch (e) {
+      errorMessage = e is APIError ? e.message : 'تعذّر الاتصال بالخادم';
+    } finally {
+      isLoading = false; notifyListeners();
     }
-    on APIError catch (e) { errorMessage = e.message; }
-    isLoading = false; notifyListeners();
   }
 
   void setFilteredProducts(List<Product> filtered) {
