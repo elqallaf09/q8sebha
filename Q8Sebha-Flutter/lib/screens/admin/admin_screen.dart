@@ -284,13 +284,14 @@ class _AddProductScreenState extends State<_AddProductScreen> {
     }
     setState(() { _loading=true; _error=null; });
     try {
-      // رفع الصور (اختياري — لو فشل نكمل بدون صور)
+      // رفع الصور — أظهر الخطأ لو فشل
       List<String> urls = [];
       if (_images.isNotEmpty) {
         try {
           urls = await APIService.instance.uploadImages(_images);
-        } catch (_) {
-          // تجاهل خطأ رفع الصور وأكمل الإضافة
+        } catch (e) {
+          setState(() { _error = '⚠️ فشل رفع الصور: $e\nسيُحفظ المنتج بدون صور'; });
+          await Future.delayed(const Duration(seconds: 2)); // اعطِ المستخدم وقت يقرأ
         }
       }
       await APIService.instance.adminAddProduct({
@@ -477,7 +478,10 @@ class _EditProductScreenState extends State<_EditProductScreen> {
         try {
           final uploaded = await APIService.instance.uploadImages(_newImages);
           urls = [...urls, ...uploaded];
-        } catch (_) {}
+        } catch (e) {
+          setState(() { _error = '⚠️ فشل رفع الصور: $e\nسيُحفظ التعديل بالصور القديمة فقط'; });
+          await Future.delayed(const Duration(seconds: 2));
+        }
       }
       await APIService.instance.adminUpdateProduct(widget.product['id'] as int, {
         'name': _name.text,

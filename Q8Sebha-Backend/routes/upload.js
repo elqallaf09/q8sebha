@@ -22,7 +22,10 @@ const upload = multer({
 
 // رفع ملف واحد على Supabase Storage
 const uploadToSupabase = (buffer, originalName, mimetype) => new Promise((resolve, reject) => {
-  const ext      = (originalName.split('.').pop() || 'jpg').toLowerCase();
+  let ext = (originalName.split('.').pop() || 'jpg').toLowerCase();
+  // HEIC/HEIF من iPhone → احفظ كـ jpg (البيانات تكون JPEG بعد image_picker compression)
+  if (ext === 'heic' || ext === 'heif') { ext = 'jpg'; mimetype = 'image/jpeg'; }
+  if (!['jpg','jpeg','png','webp','gif'].includes(ext)) ext = 'jpg';
   const filePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
   const urlObj   = new URL(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${filePath}`);
 
@@ -42,8 +45,13 @@ const uploadToSupabase = (buffer, originalName, mimetype) => new Promise((resolv
     let data = '';
     res.on('data', chunk => data += chunk);
     res.on('end', () => {
-      if (res.statusCode >= 400) return reject(new Error(`Supabase Storage error ${res.statusCode}: ${data}`));
-      resolve(`${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${filePath}`);
+      if (res.statusCode >= 400) {
+        console.error(`[upload] Supabase error ${res.statusCode}: ${data}`);
+        return reject(new Error(`Supabase Storage error ${res.statusCode}: ${data}`));
+      }
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${filePath}`;
+      console.log(`[upload] ✅ uploaded: ${publicUrl}`);
+      resolve(publicUrl);
     });
   });
   req.on('error', reject);
@@ -61,14 +69,16 @@ router.post('/', authenticate, upload.array('images', 6), async (req, res) => {
     return res.status(500).json({ success: false, message: 'خدمة رفع الصور غير مضبوطة' });
   }
 
+  console.log(`[upload] ${req.files.length} file(s), sizes: ${req.files.map(f=>`${f.originalname}(${f.size}b)`).join(', ')}`);
+
   try {
     const urls = await Promise.all(
       req.files.map(f => uploadToSupabase(f.buffer, f.originalname, f.mimetype))
     );
     res.json({ success: true, data: { urls } });
   } catch (err) {
-    console.error('[upload supabase]', err.message);
-    res.status(500).json({ success: false, message: 'فشل رفع الصورة، حاول مجدداً' });
+    console.error('[upload] ❌', err.message);
+    res.status(500).json({ success: false, message: `فشل رفع الصورة: ${err.message}` });
   }
 });
 
