@@ -303,6 +303,35 @@ class Order {
   }
 }
 
+// ─── CartItem ─────────────────────────────────────────────────────────────
+class CartItem {
+  final int id, productId;
+  int quantity;
+  final String name, emoji;
+  final double price;
+  final List<String> imageUrls;
+  final String? notes;
+
+  CartItem({required this.id, required this.productId, required this.quantity,
+    required this.name, required this.emoji, required this.price,
+    this.imageUrls = const [], this.notes});
+
+  factory CartItem.fromJson(Map<String,dynamic> j) => CartItem(
+    id:        j['id'],
+    productId: j['product_id'],
+    quantity:  j['quantity'] ?? 1,
+    name:      j['name'] ?? j['product_name'] ?? '',
+    emoji:     j['emoji'] ?? j['product_emoji'] ?? '📿',
+    price:     double.tryParse(j['price']?.toString() ?? '0') ?? 0.0,
+    imageUrls: List<String>.from(j['image_urls'] ?? []),
+    notes:     j['notes'],
+  );
+
+  double get total => price * quantity;
+  String get totalFormatted => total.toStringAsFixed(3);
+  String get priceFormatted => price.toStringAsFixed(3);
+}
+
 // ─── AppNotification ──────────────────────────────────────────────────────
 class AppNotification {
   final int id;
