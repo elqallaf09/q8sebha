@@ -8,11 +8,24 @@ const h = fn => (req, res, next) => fn(req, res, next).catch(next);
 router.use(authenticate, adminOnly);
 
 router.get('/stats', h(async (req, res) => {
-  const users    = (await db.query('SELECT COUNT(*) FROM users')).rows[0].count;
-  const auctions = (await db.query("SELECT COUNT(*) FROM auctions WHERE status='active'")).rows[0].count;
-  const products = (await db.query('SELECT COUNT(*) FROM products WHERE is_available=1')).rows[0].count;
-  const orders   = (await db.query('SELECT COUNT(*) FROM orders')).rows[0].count;
-  res.json({ success: true, data: { users:+users, active_auctions:+auctions, products:+products, orders:+orders } });
+  const [usersR, auctionsR, productsR, ordersR, revenueR, bannedR, pendingR] = await Promise.all([
+    db.query('SELECT COUNT(*) FROM users'),
+    db.query("SELECT COUNT(*) FROM auctions WHERE status='active'"),
+    db.query('SELECT COUNT(*) FROM products WHERE is_available=1'),
+    db.query('SELECT COUNT(*) FROM orders'),
+    db.query("SELECT COALESCE(SUM(total_price),0) AS total FROM orders WHERE status NOT IN ('cancelled')"),
+    db.query('SELECT COUNT(*) FROM users WHERE is_banned=1'),
+    db.query("SELECT COUNT(*) FROM orders WHERE status='pending'"),
+  ]);
+  res.json({ success: true, data: {
+    users:           +usersR.rows[0].count,
+    active_auctions: +auctionsR.rows[0].count,
+    products:        +productsR.rows[0].count,
+    orders:          +ordersR.rows[0].count,
+    orders_total:    parseFloat(revenueR.rows[0].total).toFixed(3),
+    banned_users:    +bannedR.rows[0].count,
+    pending_orders:  +pendingR.rows[0].count,
+  }});
 }));
 
 router.get('/users', h(async (req, res) => {

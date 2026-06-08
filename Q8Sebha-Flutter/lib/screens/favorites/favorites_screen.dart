@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../providers/auth_provider.dart';
@@ -174,7 +175,7 @@ class _FavCard extends StatelessWidget {
         ClipRRect(
           borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
           child: imageUrl != null && imageUrl!.startsWith('http')
-              ? Image.network(imageUrl!, width: 90, height: 90, fit: BoxFit.cover,
+              ? CachedNetworkImage(imageUrl:imageUrl!, width: 90, height: 90, fit: BoxFit.cover,
                   errorBuilder: (_,__,___) => _placeholder())
               : _placeholder(),
         ),

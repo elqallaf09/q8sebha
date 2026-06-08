@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auction_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -169,7 +170,7 @@ class _AuctionCard extends StatelessWidget {
                             color: const Color(0xFFF0EDE8),
                             child: const Center(
                               child: Text('📿', style: TextStyle(fontSize: 60))))
-                        : Image.network(
+                        : CachedNetworkImage(imageUrl:
                             AppConfig.imageUrl(auction.primaryImage),
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Container(

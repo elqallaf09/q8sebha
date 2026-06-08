@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../main.dart';
 import '../../config/app_config.dart';
 import '../../widgets/common_widgets.dart';
 import '../../services/api_service.dart';
+import '../../services/invoice_service.dart';
 import '../orders/orders_screen.dart';
 
 class CartScreen extends StatefulWidget {
@@ -138,7 +140,7 @@ class _CartItemCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: hasImg
-                ? Image.network(AppConfig.imageUrl(item.imageUrls[0]),
+                ? CachedNetworkImage(imageUrl:AppConfig.imageUrl(item.imageUrls[0]),
                     width: 70, height: 70, fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => _emojiBox(item.emoji))
                 : _emojiBox(item.emoji),
@@ -341,7 +343,7 @@ class _OrderSummaryState extends State<_OrderSummary> {
   Future<void> _submit(BuildContext sheetCtx) async {
     setState(() => _submitting = true);
     try {
-      await APIService.instance.createOrderFromCart(
+      final order = await APIService.instance.createOrderFromCart(
         deliveryAddress: _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
@@ -355,9 +357,12 @@ class _OrderSummaryState extends State<_OrderSummary> {
               textAlign: TextAlign.right,
               style: TextStyle(fontFamily: 'Tajawal')),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 4)));
-        // انتقل لشاشة الطلبات
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersScreen()));
+            duration: Duration(seconds: 3)));
+        // عرض الفاتورة مباشرة
+        await InvoiceService.instance.previewInvoice(order, context);
+        if (mounted) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersScreen()));
+        }
       }
     } catch (e) {
       if (mounted) {

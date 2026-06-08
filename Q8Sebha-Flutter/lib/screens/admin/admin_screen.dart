@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../main.dart';
@@ -8,6 +9,8 @@ import '../../config/app_config.dart';
 import '../../models/models.dart';
 import '../../services/api_service.dart';
 import '../../widgets/common_widgets.dart';
+import '../../services/invoice_service.dart';
+import '../../models/models.dart' show Order, OrderItem;
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -97,13 +100,16 @@ class _StatsTabState extends State<_StatsTab> {
           ]),
           const SizedBox(height:12),
           Row(children: [
-            Expanded(child: _StatCard('المزادات', '${s['auctions']??0}', Icons.gavel, Colors.orange)),
+            Expanded(child: _StatCard('المزادات', '${s['active_auctions']??0}', Icons.gavel, Colors.orange)),
             const SizedBox(width:12),
             Expanded(child: _StatCard('الطلبات', '${s['orders']??0}', Icons.shopping_bag, Colors.purple)),
           ]),
           const SizedBox(height:12),
+          // بطاقة مجموع الإيرادات — عريضة
+          _RevenueCard(total: '${s['orders_total']??'0.000'}', pending: s['pending_orders']??0),
+          const SizedBox(height:12),
           Row(children: [
-            Expanded(child: _StatCard('نشطة', '${s['active_auctions']??0}', Icons.circle, Colors.green)),
+            Expanded(child: _StatCard('انتظار', '${s['pending_orders']??0}', Icons.hourglass_top, const Color(0xFFFF9500))),
             const SizedBox(width:12),
             Expanded(child: _StatCard('محظورون', '${s['banned_users']??0}', Icons.block, Colors.red)),
           ]),
@@ -136,6 +142,43 @@ class _StatCard extends StatelessWidget {
       ]),
       const SizedBox(height:8),
       Text(title, style: AppText.caption),
+    ]),
+  );
+}
+
+class _RevenueCard extends StatelessWidget {
+  final String total;
+  final int pending;
+  const _RevenueCard({required this.total, required this.pending});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [Color(0xFF1A1A2E), Color(0xFF2D2D55)],
+        begin: Alignment.topLeft, end: Alignment.bottomRight),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 12, offset: Offset(0,4))],
+    ),
+    child: Row(children: [
+      Container(padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+        child: const Icon(Icons.account_balance_wallet, color: AppTheme.gold, size: 26)),
+      const SizedBox(width: 14),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        const Text('إجمالي الإيرادات', style: TextStyle(fontFamily:'Tajawal',fontSize:13,color:Colors.white70)),
+        const SizedBox(height: 2),
+        Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+          const Text(' د.ك', style: TextStyle(fontFamily:'Tajawal',fontSize:13,color:AppTheme.goldLight)),
+          ShaderMask(
+            shaderCallback: (b) => const LinearGradient(colors:[AppTheme.goldLight,AppTheme.gold]).createShader(b),
+            child: Text(total, style: const TextStyle(fontFamily:'Tajawal',fontWeight:FontWeight.w800,fontSize:28,color:Colors.white))),
+        ]),
+        if (pending > 0)
+          Text('$pending طلب قيد الانتظار', style: const TextStyle(fontFamily:'Tajawal',fontSize:11,color:Color(0xFFFF9500))),
+      ])),
     ]),
   );
 }
@@ -205,7 +248,7 @@ class _ProductsTabState extends State<_ProductsTab> {
                     leading: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: urls.isNotEmpty
-                          ? Image.network(AppConfig.imageUrl(urls[0] as String),
+                          ? CachedNetworkImage(imageUrl:AppConfig.imageUrl(urls[0] as String),
                               width:56, height:56, fit:BoxFit.cover,
                               errorBuilder:(_,__,___)=>Container(width:56,height:56,
                                 color:const Color(0xFFF0EDE8),
@@ -581,7 +624,7 @@ class _EditProductScreenState extends State<_EditProductScreen> {
             itemBuilder:(_, i)=>Stack(children:[
               Container(width:80, height:80, margin:const EdgeInsets.only(left:8),
                 child:ClipRRect(borderRadius:BorderRadius.circular(10),
-                  child:Image.network(AppConfig.imageUrl(_existingUrls[i]), fit:BoxFit.cover,
+                  child:CachedNetworkImage(imageUrl:AppConfig.imageUrl(_existingUrls[i]), fit:BoxFit.cover,
                     errorBuilder:(_,__,___)=>Container(color:const Color(0xFFF0EDE8),
                       child:const Icon(Icons.broken_image, color:Colors.grey))))),
               Positioned(top:2, right:2,
@@ -1032,6 +1075,14 @@ class _OrdersTabState extends State<_OrdersTab> {
             const Divider(height:14),
             // أزرار + إجمالي
             Row(children:[
+              // زر الفاتورة
+              IconButton(
+                onPressed:() => _openInvoice(o),
+                icon:const Icon(Icons.receipt_long,color:AppTheme.gold,size:22),
+                tooltip:'الفاتورة',
+                padding:EdgeInsets.zero,
+                constraints:const BoxConstraints(minWidth:32,minHeight:32)),
+              const SizedBox(width:4),
               Expanded(child:OutlinedButton.icon(
                 onPressed:()=>_sendPaymentLink(o),
                 icon:const Icon(Icons.payment,size:15,color:AppTheme.primary),
@@ -1066,6 +1117,12 @@ class _OrdersTabState extends State<_OrdersTab> {
             ],
           ])),
       ]));
+  }
+
+  void _openInvoice(dynamic o) {
+    // حول Map → Order مؤقت للفاتورة
+    final order = Order.fromJson(Map<String,dynamic>.from(o as Map));
+    InvoiceService.instance.previewInvoice(order, context);
   }
 
   String _fmtDate(dynamic iso) {

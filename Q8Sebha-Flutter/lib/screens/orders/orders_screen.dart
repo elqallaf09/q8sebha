@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../../services/api_service.dart';
 import '../../main.dart';
+import '../../services/invoice_service.dart';
 import '../../widgets/common_widgets.dart';
 
 class OrdersScreen extends StatefulWidget {
@@ -181,6 +182,22 @@ class _OrderCard extends StatelessWidget {
                 ),
               ),
             ],
+
+            // زر الفاتورة
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => InvoiceService.instance.previewInvoice(order, context),
+                icon: const Icon(Icons.receipt_long_outlined, size: 16, color: AppTheme.primary),
+                label: const Text('عرض الفاتورة',
+                  style: TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: AppTheme.primary)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppTheme.primary, width: 1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 8)),
+              ),
+            ),
 
             // Notes
             if (order.notes != null && order.notes!.isNotEmpty) ...[

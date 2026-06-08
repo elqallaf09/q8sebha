@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/services.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
@@ -155,7 +156,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                       ? GestureDetector(
                           onTap: () => _openImageGallery(context,
                               a.imageUrls.map((u) => AppConfig.imageUrl(u)).toList(), 0),
-                          child: Image.network(AppConfig.imageUrl(a.primaryImage),
+                          child: CachedNetworkImage(imageUrl:AppConfig.imageUrl(a.primaryImage),
                               width: double.infinity, height: 280, fit: BoxFit.cover,
                               errorBuilder: (_,__,___) => const Center(child: Text('📿', style: TextStyle(fontSize: 100)))))
                       : PageView.builder(
@@ -163,7 +164,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                           itemBuilder: (_, i) => GestureDetector(
                             onTap: () => _openImageGallery(context,
                                 a.imageUrls.map((u) => AppConfig.imageUrl(u)).toList(), i),
-                            child: Image.network(AppConfig.imageUrl(a.imageUrls[i]),
+                            child: CachedNetworkImage(imageUrl:AppConfig.imageUrl(a.imageUrls[i]),
                                 width: double.infinity, height: 280, fit: BoxFit.cover,
                                 errorBuilder: (_,__,___) => const Center(child: Text('📿', style: TextStyle(fontSize: 80)))),
                           ),
