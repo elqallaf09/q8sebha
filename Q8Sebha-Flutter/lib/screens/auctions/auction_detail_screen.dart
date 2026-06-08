@@ -158,7 +158,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                               a.imageUrls.map((u) => AppConfig.imageUrl(u)).toList(), 0),
                           child: CachedNetworkImage(imageUrl:AppConfig.imageUrl(a.primaryImage),
                               width: double.infinity, height: 280, fit: BoxFit.cover,
-                              errorBuilder: (_,__,___) => const Center(child: Text('📿', style: TextStyle(fontSize: 100)))))
+                              errorWidget: (_,__,___) => const Center(child: Text('📿', style: TextStyle(fontSize: 100)))))
                       : PageView.builder(
                           itemCount: a.imageUrls.length,
                           itemBuilder: (_, i) => GestureDetector(
@@ -166,7 +166,7 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                                 a.imageUrls.map((u) => AppConfig.imageUrl(u)).toList(), i),
                             child: CachedNetworkImage(imageUrl:AppConfig.imageUrl(a.imageUrls[i]),
                                 width: double.infinity, height: 280, fit: BoxFit.cover,
-                                errorBuilder: (_,__,___) => const Center(child: Text('📿', style: TextStyle(fontSize: 80)))),
+                                errorWidget: (_,__,___) => const Center(child: Text('📿', style: TextStyle(fontSize: 80)))),
                           ),
                         ),
               // تدرج
@@ -1056,7 +1056,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
           imageProvider: NetworkImage(widget.urls[i]),
           minScale: PhotoViewComputedScale.contained,
           maxScale: PhotoViewComputedScale.covered * 3,
-          errorBuilder: (_, __, ___) => const Center(
+          errorWidget: (_, __, ___) => const Center(
             child: Text('📿', style: TextStyle(fontSize: 100))),
         ),
         scrollPhysics: const BouncingScrollPhysics(),

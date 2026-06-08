@@ -173,7 +173,7 @@ class _AuctionCard extends StatelessWidget {
                         : CachedNetworkImage(imageUrl:
                             AppConfig.imageUrl(auction.primaryImage),
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            errorWidget: (_, __, ___) => Container(
                               color: const Color(0xFFF0EDE8),
                               child: const Center(
                                 child: Text('📿', style: TextStyle(fontSize: 60)))),

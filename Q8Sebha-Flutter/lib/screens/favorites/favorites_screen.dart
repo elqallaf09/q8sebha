@@ -176,7 +176,7 @@ class _FavCard extends StatelessWidget {
           borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
           child: imageUrl != null && imageUrl!.startsWith('http')
               ? CachedNetworkImage(imageUrl:imageUrl!, width: 90, height: 90, fit: BoxFit.cover,
-                  errorBuilder: (_,__,___) => _placeholder())
+                  errorWidget: (_,__,___) => _placeholder())
               : _placeholder(),
         ),
         // محتوى

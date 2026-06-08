@@ -917,7 +917,7 @@ class _ProductCardState extends State<_ProductCard>
                         ? CachedNetworkImage(imageUrl:
                             AppConfig.imageUrl(p.imageUrls[0]),
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _placeholder(),
+                            errorWidget: (_, __, ___) => _placeholder(),
                           )
                         : _placeholder(),
 
@@ -1026,4 +1026,47 @@ class _ProductCardState extends State<_ProductCard>
                 ),
               ),
 
-              // ─── معلومات ─────────────────────────────�
+              // ─── معلومات ───────────────────────────────────────────────
+              Expanded(
+                flex: 6,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(p.name,
+                        textAlign: TextAlign.right,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Tajawal',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: AppTheme.textDark,
+                        )),
+                      if (p.categoryName != null)
+                        Text(p.categoryName!,
+                          style: const TextStyle(
+                            fontFamily: 'Tajawal',
+                            fontSize: 10,
+                            color: AppTheme.textLight,
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+    color: const Color(0xFFF0EBE3),
+    child: Center(
+      child: Text(widget.product.emoji,
+        style: const TextStyle(fontSize: 40))),
+  );
+}

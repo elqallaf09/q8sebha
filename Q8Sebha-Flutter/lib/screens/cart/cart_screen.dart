@@ -142,7 +142,7 @@ class _CartItemCard extends StatelessWidget {
             child: hasImg
                 ? CachedNetworkImage(imageUrl:AppConfig.imageUrl(item.imageUrls[0]),
                     width: 70, height: 70, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _emojiBox(item.emoji))
+                    errorWidget: (_, __, ___) => _emojiBox(item.emoji))
                 : _emojiBox(item.emoji),
           ),
           const SizedBox(width: 12),

@@ -76,7 +76,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                       itemBuilder: (_, i) => CachedNetworkImage(imageUrl:
                         AppConfig.imageUrl(p.imageUrls[i]),
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorWidget: (_, __, ___) => Container(
                           color: const Color(0xFFF0EDE8),
                           child: Center(child: Text(p.emoji,
                             style: const TextStyle(fontSize: 100)))),
@@ -363,4 +363,91 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
               }
             },
           ),
-          const SizedBox(height:
+          const SizedBox(height: 16),
+        ]),
+      ),
+    );
+  }
+}
+
+// ─── زر إضافة للسلة ─────────────────────────────────────────────────────────
+class _AddToCartButton extends StatefulWidget {
+  final dynamic product;
+  const _AddToCartButton({required this.product});
+  @override State<_AddToCartButton> createState() => _AddToCartButtonState();
+}
+
+class _AddToCartButtonState extends State<_AddToCartButton> {
+  bool _adding = false;
+
+  Future<void> _addToCart() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.isGuest) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('مستخدم ضيف', textAlign: TextAlign.right,
+            style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700)),
+          content: const Text('يجب تسجيل الدخول لإضافة للسلة', textAlign: TextAlign.right,
+            style: TextStyle(fontFamily: 'Tajawal')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+              onPressed: () {
+                Navigator.pop(context);
+                auth.appState = AppState.auth;
+              },
+              child: const Text('تسجيل الدخول')),
+          ],
+        ),
+      );
+      return;
+    }
+    setState(() => _adding = true);
+    try {
+      await context.read<CartProvider>().addToCart(widget.product.id, 1);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('✅ تمت الإضافة للسلة',
+            textAlign: TextAlign.right,
+            style: TextStyle(fontFamily: 'Tajawal')),
+          backgroundColor: Colors.green,
+          action: SnackBarAction(
+            label: 'عرض السلة',
+            textColor: Colors.white,
+            onPressed: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const CartScreen())),
+          ),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('فشل الإضافة: $e',
+            style: const TextStyle(fontFamily: 'Tajawal')),
+          backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    onPressed: _adding ? null : _addToCart,
+    icon: _adding
+      ? const SizedBox(width: 18, height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2))
+      : const Icon(Icons.shopping_cart_outlined),
+    label: const Text('أضف للسلة 🛒',
+      style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700, fontSize: 15)),
+    style: OutlinedButton.styleFrom(
+      foregroundColor: AppTheme.primary,
+      side: const BorderSide(color: AppTheme.primary, width: 1.5),
+      minimumSize: const Size(double.infinity, 52),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+  );
+}

@@ -248,7 +248,7 @@ class _ProductsTabState extends State<_ProductsTab> {
                       child: urls.isNotEmpty
                           ? CachedNetworkImage(imageUrl:AppConfig.imageUrl(urls[0] as String),
                               width:56, height:56, fit:BoxFit.cover,
-                              errorBuilder:(_,__,___)=>Container(width:56,height:56,
+                              errorWidget:(_,__,___)=>Container(width:56,height:56,
                                 color:const Color(0xFFF0EDE8),
                                 child:Center(child:Text(p['emoji']??'📦', style:const TextStyle(fontSize:24)))))
                           : Container(width:56, height:56, color:const Color(0xFFF0EDE8),
@@ -623,7 +623,7 @@ class _EditProductScreenState extends State<_EditProductScreen> {
               Container(width:80, height:80, margin:const EdgeInsets.only(left:8),
                 child:ClipRRect(borderRadius:BorderRadius.circular(10),
                   child:CachedNetworkImage(imageUrl:AppConfig.imageUrl(_existingUrls[i]), fit:BoxFit.cover,
-                    errorBuilder:(_,__,___)=>Container(color:const Color(0xFFF0EDE8),
+                    errorWidget:(_,__,___)=>Container(color:const Color(0xFFF0EDE8),
                       child:const Icon(Icons.broken_image, color:Colors.grey))))),
               Positioned(top:2, right:2,
                 child:GestureDetector(
@@ -1131,3 +1131,4 @@ class _OrdersTabState extends State<_OrdersTab> {
     } catch(_) { return ''; }
   }
 }
+                                                                                   
