@@ -760,7 +760,7 @@ class _ProductsScreenState extends State<ProductsScreen>
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         sliver: SliverGrid(
           delegate: SliverChildBuilderDelegate(
-            (_, i) => _SkeletonCard(),
+            (_, i) => const _SkeletonCard(),
             childCount: 6,
           ),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -1069,4 +1069,73 @@ class _ProductCardState extends State<_ProductCard>
       child: Text(widget.product.emoji,
         style: const TextStyle(fontSize: 40))),
   );
+}
+
+// ─── Skeleton Card ────────────────────────────────────────────────────────────
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 3,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFE8E0D0),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Container(
+                    height: 10, width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8E0D0),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  Container(
+                    height: 10, width: 80,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8E0D0),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  Container(
+                    height: 10, width: 60,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8E0D0),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
