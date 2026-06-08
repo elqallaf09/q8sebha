@@ -261,6 +261,49 @@ class AppNotification {
   );
 }
 
+// ─── CartItem ─────────────────────────────────────────────────────────────
+class CartItem {
+  final int id;
+  final int productId;
+  final String name;
+  final double price;
+  final String emoji;
+  final List<String> imageUrls;
+  int quantity;
+  final String? notes;
+
+  CartItem({
+    required this.id, required this.productId, required this.name,
+    required this.price, required this.emoji, required this.imageUrls,
+    required this.quantity, this.notes,
+  });
+
+  double get total => price * quantity;
+  String get priceFormatted => price.toStringAsFixed(price % 1 == 0 ? 0 : 3);
+  String get totalFormatted => total.toStringAsFixed(total % 1 == 0 ? 0 : 3);
+
+  factory CartItem.fromJson(Map<String,dynamic> j) {
+    List<String> imgs = [];
+    if (j['image_urls'] != null) {
+      if (j['image_urls'] is List) imgs = List<String>.from(j['image_urls']);
+      else if (j['image_urls'] is String && (j['image_urls'] as String).isNotEmpty) {
+        try { imgs = List<String>.from(j['image_urls'].toString()
+            .replaceAll('[','').replaceAll(']','').replaceAll('"','').split(',')); } catch (_) {}
+      }
+    }
+    return CartItem(
+      id: j['id'],
+      productId: j['product_id'],
+      name: j['name'] ?? '',
+      price: double.tryParse(j['price'].toString()) ?? 0.0,
+      emoji: j['emoji'] ?? '📿',
+      imageUrls: imgs,
+      quantity: j['quantity'] ?? 1,
+      notes: j['notes'],
+    );
+  }
+}
+
 // ─── Category ─────────────────────────────────────────────────────────────
 class Category {
   final int id;

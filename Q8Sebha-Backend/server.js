@@ -118,6 +118,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin',         require('./routes/admin'));
 app.use('/api/favorites',     require('./routes/favorites'));
 app.use('/api/reviews',       require('./routes/reviews'));
+app.use('/api/cart',          require('./routes/cart'));
 
 app.get('/health', async (_, res) => {
   try {

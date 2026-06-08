@@ -182,6 +182,15 @@ const init = async () => {
       is_active  INTEGER DEFAULT 1,
       created_at TIMESTAMP DEFAULT NOW()
     )`,
+    `CREATE TABLE IF NOT EXISTS cart_items (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      quantity   INTEGER DEFAULT 1,
+      notes      TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_id, product_id)
+    )`,
   ];
   for (const sql of newTables) {
     try { await pool.query(sql); } catch (_) {}

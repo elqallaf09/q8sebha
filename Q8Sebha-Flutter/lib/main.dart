@@ -6,6 +6,7 @@ import 'providers/auth_provider.dart';
 import 'providers/auction_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/notification_provider.dart';
+import 'providers/cart_provider.dart';
 import 'screens/splash_screen.dart';
 import 'services/fcm_service.dart';
 
@@ -39,6 +40,7 @@ class Q8SebhaApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuctionProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: MaterialApp(
         title: 'Liger Mesbah',

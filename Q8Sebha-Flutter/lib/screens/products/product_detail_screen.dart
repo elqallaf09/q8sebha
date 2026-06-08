@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../main.dart';
 import '../../config/app_config.dart';
 import '../../widgets/common_widgets.dart';
+import '../cart/cart_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final int productId;
@@ -251,7 +253,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
                   if (vm.errorMessage != null) ErrorBanner(vm.errorMessage!),
 
-                  // زر الشراء
+                  // زر إضافة للسلة
+                  _AddToCartButton(product: p),
+                  const SizedBox(height: 12),
+
+                  // زر الشراء المباشر
                   Q8Button(
                     label: 'شراء الآن 🛒',
                     isLoading: vm.isLoading,
@@ -366,3 +372,125 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     );
   }
 }
+
+// ─── زر إضافة للسلة ──────────────────────────────────────────────────────
+class _AddToCartButton extends StatefulWidget {
+  final dynamic product;
+  const _AddToCartButton({required this.product});
+  @override State<_AddToCartButton> createState() => _AddToCartButtonState();
+}
+
+class _AddToCartButtonState extends State<_AddToCartButton> {
+  bool _loading = false;
+  bool _added   = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _loading ? null : () => _addToCart(context),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        height: 54,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: _added
+                ? [Colors.green.shade400, Colors.green.shade600]
+                : [AppTheme.goldLight, AppTheme.gold],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: (_added ? Colors.green : AppTheme.gold).withOpacity(0.35),
+              blurRadius: 12, offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Center(
+          child: _loading
+              ? const SizedBox(
+                  width: 24, height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(_added ? Icons.check_circle_outline : Icons.shopping_bag_outlined,
+                        color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      _added ? 'تمت الإضافة ✓' : 'أضف للسلة',
+                      style: const TextStyle(fontFamily: 'Tajawal',
+                          fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addToCart(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    if (auth.isGuest) {
+      _showGuestDialog(context);
+      return;
+    }
+    setState(() { _loading = true; });
+    final ok = await context.read<CartProvider>().addItem(widget.product.id);
+    if (!mounted) return;
+    setState(() { _loading = false; _added = ok; });
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: Colors.green.shade600,
+        duration: const Duration(seconds: 3),
+        content: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
+              },
+              child: const Text('عرض السلة',
+                  style: TextStyle(color: Colors.white, fontFamily: 'Tajawal',
+                      fontWeight: FontWeight.w700, decoration: TextDecoration.underline)),
+            ),
+            const Text('✅ أُضيف للسلة',
+                textAlign: TextAlign.right,
+                style: TextStyle(fontFamily: 'Tajawal', color: Colors.white)),
+          ],
+        ),
+      ));
+      // reset back to normal after 2 seconds
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) setState(() => _added = false);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        backgroundColor: Colors.red,
+        content: Text('فشلت الإضافة، حاول مجدداً',
+            textAlign: TextAlign.right,
+            style: TextStyle(fontFamily: 'Tajawal', color: Colors.white)),
+      ));
+    }
+  }
+
+  void _showGuestDialog(BuildContext context) => showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('مستخدم ضيف', textAlign: TextAlign.right,
+          style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700)),
+      content: const Text('يجب تسجيل الدخول لإضافة منتجات للسلة',
+          textAlign: TextAlign.right, style: TextStyle(fontFamily: 'Tajawal')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+          onPressed: () {
+            Navigator.pop(context);
+            context.read<AuthProvider>().appState = AppState.auth;
+          },
+          child: const Text('تسجيل الدخول', style: TextStyle(color: Colors.white))),
+      ],
+    ),
+  );
+}
+

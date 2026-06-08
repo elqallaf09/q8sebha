@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../models/models.dart';
 import '../../main.dart';
 import '../../config/app_config.dart';
@@ -10,6 +11,7 @@ import '../../widgets/common_widgets.dart';
 import '../../utils/responsive.dart';
 import '../../services/api_service.dart';
 import 'product_detail_screen.dart';
+import '../cart/cart_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -100,6 +102,7 @@ class _ProductsScreenState extends State<ProductsScreen>
     _gridAnim   = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().fetchProducts();
+      context.read<CartProvider>().fetchCart();
       _headerAnim.forward();
       Future.delayed(const Duration(milliseconds: 300), () => _gridAnim.forward());
     });
@@ -382,16 +385,49 @@ class _ProductsScreenState extends State<ProductsScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // أيقونة السلة
-                      Container(
-                        width: 42, height: 42,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white.withOpacity(0.12)),
+                      // أيقونة السلة مع Badge
+                      Consumer<CartProvider>(
+                        builder: (_, cart, __) => GestureDetector(
+                          onTap: () => Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => const CartScreen())),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 42, height: 42,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.white.withOpacity(0.12)),
+                                ),
+                                child: const Icon(Icons.shopping_bag_outlined,
+                                    color: Colors.white70, size: 20),
+                              ),
+                              if (cart.count > 0)
+                                Positioned(
+                                  top: -4, left: -4,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: AppTheme.gold,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                    child: Text(
+                                      cart.count > 99 ? '99+' : '${cart.count}',
+                                      style: const TextStyle(
+                                        fontFamily: 'Tajawal',
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                        child: const Icon(Icons.shopping_bag_outlined,
-                            color: Colors.white70, size: 20),
                       ),
                       // الشعار
                       Row(children: [

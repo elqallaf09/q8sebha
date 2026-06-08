@@ -199,6 +199,22 @@ class APIService {
   Future<void> markRead(int id)  => request('PATCH', '/notifications/$id/read');
   Future<void> markAllRead()     => request('POST',  '/notifications/read-all');
 
+  // ─── Cart ────────────────────────────────────────────────────────────────
+  Future<List<CartItem>> getCart() async {
+    final r = await request('GET', '/cart');
+    return (r['data'] as List).map((e) => CartItem.fromJson(e)).toList();
+  }
+
+  Future<void> addToCart(int productId, {int quantity=1, String? notes}) =>
+      request('POST', '/cart', body: {'product_id': productId, 'quantity': quantity, if (notes != null) 'notes': notes});
+
+  Future<void> updateCartItem(int id, int quantity) =>
+      request('PATCH', '/cart/$id', body: {'quantity': quantity});
+
+  Future<void> removeFromCart(int id) => request('DELETE', '/cart/$id');
+
+  Future<void> clearCart() => request('DELETE', '/cart');
+
   // ─── Admin ───────────────────────────────────────────────────────────────
   Future<Map<String,dynamic>> adminStats()  => request('GET', '/admin/stats');
 
