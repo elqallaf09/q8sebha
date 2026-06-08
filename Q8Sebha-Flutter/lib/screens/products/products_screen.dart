@@ -511,15 +511,17 @@ class _ProductsScreenState extends State<ProductsScreen>
         : const Color(0xFF1A1A2E);
 
     return SliverToBoxAdapter(
-      child: Container(
-        color: Colors.white,
-        child: Column(children: [
-          // ─── الصف الأول: الفئات الرئيسية ──────────────────────────────
-          SizedBox(
-            height: 56,
+      child: Column(children: [
+
+        // ─── الفئات الرئيسية ───────────────────────────────────────────
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: SizedBox(
+            height: 44,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _cats.length,
               itemBuilder: (_, i) {
                 final c = _cats[i];
@@ -530,37 +532,48 @@ class _ProductsScreenState extends State<ProductsScreen>
                 return GestureDetector(
                   onTap: () => _selectCat(slug),
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
+                    duration: const Duration(milliseconds: 250),
                     curve: Curves.easeOutCubic,
-                    margin: const EdgeInsets.only(left: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    margin: const EdgeInsets.only(left: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                     decoration: BoxDecoration(
                       gradient: isSelected ? LinearGradient(
-                        colors: [catColor, catColor.withOpacity(0.75)],
+                        colors: [catColor, catColor.withOpacity(0.8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ) : null,
-                      color: isSelected ? null : const Color(0xFFF5F4F1),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: isSelected ? [BoxShadow(
-                          color: catColor.withOpacity(0.35),
-                          blurRadius: 8, offset: const Offset(0, 3))] : [],
+                      color: isSelected ? null : Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: isSelected
+                            ? Colors.transparent
+                            : const Color(0xFFDDDAD3),
+                        width: 1.2,
+                      ),
+                      boxShadow: isSelected
+                          ? [BoxShadow(color: catColor.withOpacity(0.45),
+                              blurRadius: 14, offset: const Offset(0, 4))]
+                          : [BoxShadow(color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4, offset: const Offset(0, 2))],
                     ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       Text(c['emoji'] as String,
-                        style: const TextStyle(fontSize: 14)),
-                      const SizedBox(width: 5),
+                        style: TextStyle(fontSize: isSelected ? 16 : 14)),
+                      const SizedBox(width: 6),
                       Text(c['name'] as String,
                         style: TextStyle(
-                          fontFamily: 'Tajawal', fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? Colors.white : AppTheme.textMid,
+                          fontFamily: 'Tajawal',
+                          fontSize: 13,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          color: isSelected ? Colors.white : const Color(0xFF555050),
                         )),
-                      // مؤشر الفئات الفرعية
                       if (hasSubs) ...[
-                        const SizedBox(width: 2),
-                        Icon(Icons.keyboard_arrow_down,
-                          size: 14,
-                          color: isSelected ? Colors.white70 : AppTheme.textMid,
-                        ),
+                        const SizedBox(width: 3),
+                        Icon(isSelected
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                          size: 15,
+                          color: isSelected ? Colors.white70 : const Color(0xFF999090)),
                       ],
                     ]),
                   ),
@@ -568,67 +581,81 @@ class _ProductsScreenState extends State<ProductsScreen>
               },
             ),
           ),
+        ),
 
-          // ─── الصف الثاني: الفئات الفرعية (يظهر فقط عند الاختيار) ──────
-          AnimatedCrossFade(
-            duration: const Duration(milliseconds: 280),
-            firstCurve: Curves.easeOut,
-            secondCurve: Curves.easeIn,
-            crossFadeState: subs != null
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            firstChild: const SizedBox(width: double.infinity, height: 0),
-            secondChild: subs != null ? Container(
-              color: parentColor.withOpacity(0.04),
-              child: Column(children: [
-                Container(height: 1, color: parentColor.withOpacity(0.12)),
-                SizedBox(
-                  height: 50,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: subs.length + 1, // +1 for "الكل"
-                    itemBuilder: (_, i) {
-                      final isAll = i == 0;
-                      final slug = isAll ? null : subs[i-1]['slug'] as String;
-                      final name = isAll ? 'الكل' : subs[i-1]['name'] as String;
-                      final isSelected = _subCategory == slug;
-                      return GestureDetector(
-                        onTap: () => _selectSubCat(slug),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? parentColor
-                                : parentColor.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected
-                                  ? parentColor
-                                  : parentColor.withOpacity(0.2),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(name,
-                            style: TextStyle(
-                              fontFamily: 'Tajawal', fontSize: 12,
-                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                              color: isSelected ? Colors.white : parentColor.withOpacity(0.85),
-                            )),
-                        ),
-                      );
-                    },
+        // ─── الفئات الفرعية (خلفية داكنة) ────────────────────────────
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 300),
+          firstCurve: Curves.easeOut,
+          secondCurve: Curves.easeIn,
+          crossFadeState: subs != null
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          firstChild: const SizedBox(width: double.infinity, height: 0),
+          secondChild: subs != null
+              ? Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [parentColor, parentColor.withOpacity(0.85)],
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                    ),
                   ),
-                ),
-              ]),
-            ) : const SizedBox.shrink(),
-          ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: SizedBox(
+                    height: 36,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: subs.length + 1,
+                      itemBuilder: (_, i) {
+                        final isAll = i == 0;
+                        final slug = isAll ? null : subs[i-1]['slug'] as String;
+                        final name = isAll ? 'الكل' : subs[i-1]['name'] as String;
+                        final isSelected = _subCategory == slug;
+                        return GestureDetector(
+                          onTap: () => _selectSubCat(slug),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.13),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.white.withOpacity(0.3),
+                                width: 1.2,
+                              ),
+                              boxShadow: isSelected ? [
+                                BoxShadow(
+                                  color: Colors.white.withOpacity(0.25),
+                                  blurRadius: 10, spreadRadius: 1),
+                              ] : [],
+                            ),
+                            child: Text(name,
+                              style: TextStyle(
+                                fontFamily: 'Tajawal',
+                                fontSize: 12,
+                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                color: isSelected
+                                    ? parentColor
+                                    : Colors.white.withOpacity(0.92),
+                              )),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
 
-          Container(height: 1, color: const Color(0xFFF0EEE9)),
-        ]),
-      ),
+        Container(height: 1, color: const Color(0xFFEAE8E2)),
+      ]),
     );
   }
 
