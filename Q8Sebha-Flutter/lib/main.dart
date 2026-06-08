@@ -10,6 +10,9 @@ import 'providers/cart_provider.dart';
 import 'screens/splash_screen.dart';
 import 'services/fcm_service.dart';
 
+/// مفتاح التنقل العالمي — يُستخدم من FCMService
+final navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -45,6 +48,7 @@ class Q8SebhaApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Liger Mesbah',
         debugShowCheckedModeBanner: false,
+        navigatorKey: navigatorKey,
         locale: const Locale('ar'),
         builder: (context, child) => Directionality(
           textDirection: TextDirection.rtl,

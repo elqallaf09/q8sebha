@@ -1,7 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'api_service.dart';
+import '../main.dart';
+import '../screens/orders/orders_screen.dart';
 
 /// معالج الإشعارات في الخلفية (خارج الكلاس)
 @pragma('vm:entry-point')
@@ -48,8 +51,18 @@ class FCMService {
     // معالج الخلفية
     FirebaseMessaging.onBackgroundMessage(_bgHandler);
 
-    // إشعار وصل والتطبيق مفتوح
+    // إشعار وصل والتطبيق مفتوح — عرض محلي
     FirebaseMessaging.onMessage.listen(_showLocal);
+
+    // الضغط على إشعار والتطبيق في الخلفية
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleTap);
+
+    // الضغط على إشعار والتطبيق كان مغلقاً
+    final initial = await _fcm.getInitialMessage();
+    if (initial != null) {
+      // نأخر قليلاً حتى يجهز الـ navigator
+      Future.delayed(const Duration(milliseconds: 500), () => _handleTap(initial));
+    }
 
     // حفظ token في الـ backend
     final token = await _fcm.getToken();
@@ -57,6 +70,18 @@ class FCMService {
 
     // تحديث token عند التجديد
     _fcm.onTokenRefresh.listen(_saveToken);
+  }
+
+  // ─── التنقل عند الضغط على الإشعار ───────────────────────────────────────
+  static void _handleTap(RemoteMessage msg) {
+    final type = msg.data['type'];
+    final nav  = navigatorKey.currentState;
+    if (nav == null) return;
+
+    if (type == 'order_status') {
+      nav.push(MaterialPageRoute(builder: (_) => const OrdersScreen()));
+    }
+    // يمكن إضافة أنواع أخرى هنا (auction, payment, إلخ)
   }
 
   // ─── عرض إشعار محلي ──────────────────────────────────────────────────

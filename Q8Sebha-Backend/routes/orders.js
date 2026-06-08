@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db = require('../db/db');
 const { authenticate, adminOnly } = require('../middleware/auth');
+const { sendToToken } = require('../utils/fcm');
 
 // ─── POST /orders — طلب منتج واحد مباشر ─────────────────────────────────
 router.post('/', authenticate, async (req, res) => {
@@ -161,18 +162,45 @@ router.patch('/:id/status', authenticate, adminOnly, async (req, res) => {
   const valid = ['pending','confirmed','processing','shipped','delivered','cancelled'];
   if (!valid.includes(status))
     return res.status(400).json({ success: false, message: 'status غير صحيح' });
+
+  const statusAr = {
+    pending:    'قيد الانتظار',
+    confirmed:  'تم التأكيد ✅',
+    processing: 'قيد التجهيز 🔧',
+    shipped:    'في الطريق إليك 🚚',
+    delivered:  'تم التوصيل 🎉',
+    cancelled:  'ملغي ❌',
+  };
+  const statusEmoji = {
+    pending: '🕐', confirmed: '✅', processing: '🔧',
+    shipped: '🚚', delivered: '🎉', cancelled: '❌',
+  };
+
   try {
     await db.query('UPDATE orders SET status=$1 WHERE id=$2', [status, req.params.id]);
-    const order = (await db.query('SELECT * FROM orders WHERE id=$1', [req.params.id])).rows[0];
+    const order = (await db.query(
+      'SELECT o.*, u.device_token FROM orders o JOIN users u ON u.id=o.buyer_id WHERE o.id=$1',
+      [req.params.id])).rows[0];
     if (!order) return res.status(404).json({ success: false, message: 'الطلب غير موجود' });
 
-    // إشعار للمشتري
-    const statusAr = { pending:'قيد الانتظار', confirmed:'تم التأكيد', processing:'قيد التجهيز',
-                       shipped:'تم الشحن', delivered:'تم التوصيل', cancelled:'ملغي' };
+    const title = `${statusEmoji[status]} تحديث طلبك`;
+    const body  = `طلبك #${order.order_number} أصبح: ${statusAr[status]}`;
+
+    // 1) إشعار داخل التطبيق
     await db.query(
-      `INSERT INTO notifications (user_id,type,title,body,icon)
-       VALUES ($1,'order','تحديث طلبك',$2,'📦')`,
-      [order.buyer_id, `طلبك #${order.order_number} أصبح: ${statusAr[status]}`]);
+      `INSERT INTO notifications (user_id,type,title,body,icon,data)
+       VALUES ($1,'order',$2,$3,'📦',$4)`,
+      [order.buyer_id, title, body,
+       JSON.stringify({ order_id: order.id, status })]);
+
+    // 2) FCM push notification
+    if (order.device_token) {
+      await sendToToken(order.device_token, title, body, {
+        type:     'order_status',
+        order_id: String(order.id),
+        status,
+      });
+    }
 
     res.json({ success: true, data: order });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
