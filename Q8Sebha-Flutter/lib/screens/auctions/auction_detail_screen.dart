@@ -1056,7 +1056,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
           imageProvider: NetworkImage(widget.urls[i]),
           minScale: PhotoViewComputedScale.contained,
           maxScale: PhotoViewComputedScale.covered * 3,
-          errorWidget: (_, __, ___) => const Center(
+          errorBuilder: (_, __, ___) => const Center(
             child: Text('📿', style: TextStyle(fontSize: 100))),
         ),
         scrollPhysics: const BouncingScrollPhysics(),

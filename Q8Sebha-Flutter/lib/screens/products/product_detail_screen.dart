@@ -407,7 +407,7 @@ class _AddToCartButtonState extends State<_AddToCartButton> {
     }
     setState(() => _adding = true);
     try {
-      await context.read<CartProvider>().addToCart(widget.product.id, 1);
+      await context.read<CartProvider>().addItem(widget.product.id, quantity: 1);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('✅ تمت الإضافة للسلة',

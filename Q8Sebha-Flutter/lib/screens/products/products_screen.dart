@@ -760,7 +760,7 @@ class _ProductsScreenState extends State<ProductsScreen>
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         sliver: SliverGrid(
           delegate: SliverChildBuilderDelegate(
-            (_, i) => const _SkeletonCard(),
+            (_, i) => _SkeletonCard(),
             childCount: 6,
           ),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
