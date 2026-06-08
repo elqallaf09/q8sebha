@@ -41,7 +41,7 @@ class Q8SebhaApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
-        title: 'Q8Sebha',
+        title: 'Liger Mesbah',
         debugShowCheckedModeBanner: false,
         locale: const Locale('ar'),
         builder: (context, child) => Directionality(

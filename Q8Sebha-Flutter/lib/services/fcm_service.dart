@@ -18,7 +18,7 @@ class FCMService {
   final _local = FlutterLocalNotificationsPlugin();
 
   static const _channel = AndroidNotificationChannel(
-    'q8sebha_channel', 'Q8Sebha',
+    'liger_channel', 'Liger Mesbah',
     description: 'إشعارات المزادات والمنتجات',
     importance: Importance.high,
   );

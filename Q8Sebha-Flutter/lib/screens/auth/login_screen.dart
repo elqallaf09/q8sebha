@@ -303,13 +303,18 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(children: [
               // ─── الشعار ──────────────────────────────────────────────
-              const Text('📿', style: TextStyle(fontSize: 54)),
-              const SizedBox(height: 4),
-              const Text('Q8Sebha',
-                  style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w700,
-                      fontSize: 28, color: Colors.white)),
-              const Text('مسابيح وأحجار كريمة',
-                  style: TextStyle(fontFamily: 'Tajawal', fontSize: 13, color: Colors.white60)),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset('assets/images/logo.jpg',
+                    width: 90, height: 90, fit: BoxFit.cover),
+              ),
+              const SizedBox(height: 10),
+              const Text('مسابيح لايقر',
+                  style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800,
+                      fontSize: 26, color: Colors.white)),
+              const Text('Liger Mesbah',
+                  style: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w500,
+                      fontSize: 15, color: Color(0xFFC9A84C), letterSpacing: 1.5)),
               const SizedBox(height: 20),
 
               // ─── البطاقة ─────────────────────────────────────────────

@@ -20,7 +20,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   static const _pages = [
     _OnboardPage(
       emoji: '📿',
-      title: 'مرحباً بك في Q8Sebha',
+      title: 'مرحباً بك في مسابيح لايقر',
       subtitle: 'اكتشف أجود المسابيح\nوالأحجار الكريمة من الكويت\nوحول العالم',
       color1: Color(0xFF0F0F1E),
       color2: Color(0xFF1A1A35),
@@ -29,7 +29,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardPage(
       emoji: '🔨',
       title: 'مزادات حية',
-      subtitle: 'زايد على قطع نادرة\nفي الوقت الفعلي\nوفز بأروع المسابيح',
+      subtitle: '',
       color1: Color(0xFF0E1A0E),
       color2: Color(0xFF1A2E1A),
       accentColor: Color(0xFF4CAF50),
