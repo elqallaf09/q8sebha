@@ -5,7 +5,13 @@ const { authenticate, adminOnly, optionalAuth } = require('../middleware/auth');
 router.get('/', optionalAuth, async (req, res) => {
   const { category, search, min_price, max_price, sort='newest', page=1, limit=20 } = req.query;
   let where = ['p.is_available=1']; const params = [];
-  if (category)  { params.push(category);          where.push(`c.name_en=$${params.length}`); }
+  if (category)  {
+    // دعم الفئات الفرعية: إذا كان slug يبدأ بـ parent-slug، ابحث بالـ slug المحدد
+    // إذا كان slug رئيسياً، ابحث في slug هذا وكل الفئات الفرعية (slug LIKE 'parent-%')
+    params.push(category);
+    params.push(`${category}-%`);
+    where.push(`(c.name_en=$${params.length-1} OR c.name_en LIKE $${params.length})`);
+  }
   if (search)    { params.push(`%${search}%`);     where.push(`p.name ILIKE $${params.length}`); }
   if (min_price) { params.push(+min_price);         where.push(`p.price>=$${params.length}`); }
   if (max_price) { params.push(+max_price);         where.push(`p.price<=$${params.length}`); }
